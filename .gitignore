@@ -1,6 +1,9 @@
 #compiled python modules
 *.pyc
 
+#csv test data files
+*.csv
+
 #setuptools distribution folder
 dist/
 
