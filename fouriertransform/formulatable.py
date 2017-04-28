@@ -101,7 +101,7 @@ class FormulaTable(objet):
 		'''
 		Method for generating a summary table of the formula table, including
 		relative compound class and category abundances (both by formula
-		number and by MS intensity), total formulas detected, and average m/z
+		number and by MS intensity), total formulae detected, and average m/z
 		(separated into classes and categories).
 
 		Parameters
