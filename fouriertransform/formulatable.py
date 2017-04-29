@@ -46,9 +46,24 @@ class FormulaTable(objet):
 
 	**Attributes**
 
+	formulae : list
+		List of strings containing each molecular formula, in the format:
+		C(1-45)H(1-92)O(1-25)N(0-4)S(0-2). Length `nF`.
+
+	samples : list
+		List of strings containing each sample name. Length `nS`.
+
+	intensities : np.ndarray or pd.DataFrame
+		2D array or DataFrame containing the MS intensities of each formula
+		within each sample. Shape [`nF` x `nS`].
+
+	_chem_comp : pd.DataFrame
+		Protected attribute. Dataframe of number of each atom contained in
+		each formula (delete this text later, for my bookkeeping only.)
+
 	'''
 
-	def __init__(self):
+	def __init__(self, formulae, samples, intensities):
 
 
 	#define classmethod to generate instance from EnviroOrg output files
