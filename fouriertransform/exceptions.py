@@ -11,8 +11,30 @@ class ftException(Exception):
 	pass
 
 
+class DimError(ftException):
+	'''
+	If object dimensionality is not what it should be.
+	'''
+	pass
+
+
 class FormulaError(ftException):
 	'''
 	Detected formula is outside of the assignment bounds.
 	'''
-	pass 
+	pass
+
+
+class LengthError(ftException):
+	'''
+	If two things that should be the same length are not.
+	'''
+	pass
+
+
+class SampleError(ftException):
+	'''
+	Attempting to work with a sample that isn't in the current sample set.
+	'''
+	pass
+

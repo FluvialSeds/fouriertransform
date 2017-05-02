@@ -23,7 +23,10 @@ import warnings
 
 #import exceptions
 from .exceptions import(
+	DimError,
 	FormulaError,
+	LengthError,
+	SampleError,
 	)
 
 #define function to calculate modified aromaticity index
@@ -252,9 +255,142 @@ def _check_forms(formulae):
 			' (will still remain in sample name)')
 
 #define a function to check intensity and sample name format
-def _check_int(inteisities, sam_names = None)
+def _check_int(intensities, formulae = None, sam_names = None):
+	'''
+	Checks that inputted intensity table and sample names are in the correct
+	format.
 
-	return ints, sams
+	Parameters
+	----------
+	intensities : 2D array-like
+		Either 2D np.ndarray or pd.Dataframe of all formula intensities for
+		all samples.
+
+	formulae : list
+		List of formula names. If `None`, pulls formula names from 
+		`intensities` index values. Defaults to `None`.
+
+	sam_names : `None` or list
+		List of sample names. If `None`, pulls sample names from column names
+		of `intensities`. Defaults to `None`.
+
+	Returns
+	-------
+	ints : pd.DataFrame
+		DataFrame of intensities, with index as formula names and columns
+		as sample names.
+
+	forms : list
+		List of formula names. Length `nF`.
+
+	sams : list
+		List of sampe names. Length `nS`.
+
+	Warnings
+	--------
+	UserWarning
+		If `sam_names` = `None` and `intensities` does not contain sample
+		names, then names each sample according to column number.
+
+	Raises
+	------
+	DimError
+		If `intensities` is not two dimensional.
+
+	FormulaError
+		If no formula names exist, either in `formulae` or `intensities` 
+		index.
+
+	LengthError
+		If `intensities` is not shape [len(`formulae`) x len(`sam_names`)]
+
+	TypeError
+		If `intensities` is not np.ndarray or pd.DataFrame.
+
+	TypeError
+		If `intensities` data points are not float.
+
+	'''
+
+	#ensure intensities in the right format
+	inttype = type(intensities).__name__
+	dim = intensities.ndim
+
+	if inttype not in ['ndarray', 'DataFrame']:
+		raise TypeError(
+			'`intensities` is type: %r. Must be either np.ndarray or'
+			' pd.DataFrame!' % inttype)
+
+	elif dim != 2:
+		raise DimError(
+			'`intensities` dimensionality is %r. Must be 2!' % dim)
+
+	#if array, make into dataframe and add index + column names
+	nF, nS = np.shape(intensities)
+
+	if inttype is 'ndarray':
+		#raise formula error if necessary
+		if formulae is None:
+			raise FormulaError(
+				'No formula names exist, either as the `formulae` variable'
+				' or as the index of the `intensities` variable.')
+
+		elif len(formulae) != nF:
+			raise LengthError(
+				'`formulae` and `intensities` are not the same length!')
+
+		#if no sample names, warn and store
+		if sam_names is None:
+			warnings.warn(
+				'No sample names exist, using column numbers as sample names')
+
+			ints = pd.DataFrame(
+				intensities, 
+				index = formulae)
+
+		elif len(sam_names) != nS:
+			raise LengthError(
+				'`sam_names` and `intensities` are not the same length!')
+
+		else:
+			ints = pd.DataFrame(
+				intensities, 
+				index = formulae, 
+				columns = sam_names)
+
+	else:
+		ints = intensities
+
+	#check data type
+	if not all(ints.dtypes == float):
+		raise TypeError(
+			'intensity values are not float. Check datatype!')
+
+	#pull formula names if necessary
+	if formulae is None:
+		forms = intensities.index.values
+
+	elif not all(intensities.index == formulae):
+		raise FormulaError(
+			'formula list in `intensities` index and list of inputted'
+			' formulae do not match!')
+
+	else:
+		forms = formulae
+
+	#pull sample names if necessary
+	if sam_names is None:
+		sams = intensities.columns.values
+
+	elif not all(intensities.columns == sam_names):
+		raise SampleError(
+			'sample name list in `intensities` columns and list of inputted'
+			' samples do not match!')
+
+	else:
+		sams = sam_names
+
+	return ints, forms, sams
 
 
 #define function to generate chemical composition dataframe

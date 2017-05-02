@@ -17,6 +17,7 @@ import warnings
 
 #import exceptions
 from .exceptions import(
+	FormulaError,
 	)
 
 #import helper functions
@@ -75,25 +76,26 @@ class FormulaTable(objet):
 
 	'''
 
-	def __init__(self, formulae, intensities, sam_names = None):
+	def __init__(self, intensities, formulae = None, sam_names = None):
 
-		#check that formulae are correct format and store
-		_check_forms(formulae)
-		self.formulae = formulae
+		#check that intensities and formulae are in right format
+		ints, forms, sams = _check_int(
+			intensities, 
+			formulae = formulae, 
+			sam_names = sam_names)
+
+		nF, nS = np.shape(ints)
+		_check_forms(forms)
+
+		#store results
+		self.intensities = ints
+		self.sam_names = sams
+		self.formulae = forms
+		self.nF = nF
+		self.nS = nS
 
 		#generate a chemical composition table
 		self._chem_comp = _gen_chem_comp(formulae)
-
-		#check that intensities are in right format and store
-		ints, sams = _check_int(intensities, sam_names = sam_names)
-		self.intensities = ints
-		self.sam_names = sams
-
-		#save bookkeeping values
-		nF, nS = np.shape(ints)
-
-		self.nF = nF
-		self.nS = nS
 
 	#define classmethod to generate instance from EnviroOrg output files
 	@classmethod
