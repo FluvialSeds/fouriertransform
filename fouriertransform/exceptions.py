@@ -11,8 +11,8 @@ class ftException(Exception):
 	pass
 
 
-class ExampleError(ftException):
+class FormulaError(ftException):
 	'''
-	Array-like object is not in the right form (e.g. strings).
+	Detected formula is outside of the assignment bounds.
 	'''
 	pass 

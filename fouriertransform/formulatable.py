@@ -21,6 +21,12 @@ from .exceptions import(
 
 #import helper functions
 from .formulatable_helper import(
+	_calc_AImod,
+	_calc_category,
+	_calc_class,
+	_check_forms,
+	_check_int,
+	_gen_chem_comp,
 	)
 
 class FormulaTable(objet):
@@ -50,12 +56,18 @@ class FormulaTable(objet):
 		List of strings containing each molecular formula, in the format:
 		C(1-45)H(1-92)O(1-25)N(0-4)S(0-2). Length `nF`.
 
-	samples : list
+	nF : int
+		Number of total detected formulae in dataset.
+
+	nS : int
+		Number of samples in dataset.
+
+	sam_names : list
 		List of strings containing each sample name. Length `nS`.
 
-	intensities : np.ndarray or pd.DataFrame
-		2D array or DataFrame containing the MS intensities of each formula
-		within each sample. Shape [`nF` x `nS`].
+	intensities : pd.DataFrame
+		DataFrame containing the MS intensities of each formula within each 
+		sample. Shape [`nF` x `nS`].
 
 	_chem_comp : pd.DataFrame
 		Protected attribute. Dataframe of number of each atom contained in
@@ -63,8 +75,25 @@ class FormulaTable(objet):
 
 	'''
 
-	def __init__(self, formulae, samples, intensities):
+	def __init__(self, formulae, intensities, sam_names = None):
 
+		#check that formulae are correct format and store
+		_check_forms(formulae)
+		self.formulae = formulae
+
+		#generate a chemical composition table
+		self._chem_comp = _gen_chem_comp(formulae)
+
+		#check that intensities are in right format and store
+		ints, sams = _check_int(intensities, sam_names = sam_names)
+		self.intensities = ints
+		self.sam_names = sams
+
+		#save bookkeeping values
+		nF, nS = np.shape(ints)
+
+		self.nF = nF
+		self.nS = nS
 
 	#define classmethod to generate instance from EnviroOrg output files
 	@classmethod
@@ -140,7 +169,6 @@ class FormulaTable(objet):
 		References
 		----------
 		'''
-
 
 	#define method for plotting a sample van Krevelen
 	def sample_vankrevelen(name, ax = None, type = 'class'):

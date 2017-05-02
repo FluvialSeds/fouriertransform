@@ -12,6 +12,8 @@ __all__ = [
 	'_calc_AImod',
 	'_calc_category',
 	'_calc_class',
+	'_check_forms',
+	'_check_int',
 	'_gen_chem_comp',
 	]
 
@@ -21,6 +23,7 @@ import warnings
 
 #import exceptions
 from .exceptions import(
+	FormulaError,
 	)
 
 #define function to calculate modified aromaticity index
@@ -200,6 +203,60 @@ def _calc_class(formtab):
 
 	return cclass
 
+#define a function to check formulae format
+def _check_forms(formulae):
+	'''
+	Function to check that formulae are in the right format for inputting
+	and generating a chemical composition table.
+
+	Parameters
+	----------
+	formulae : list
+		List of strings containing formula chemical compositions.
+	
+	Warnings
+	--------
+	UserWarning
+		If inputted formulae contain phosphorus (which is not assigned in this
+		software), warns that P will be dropped from analysis.
+
+	Raises
+	------
+	FormulaError
+		If formula is not in the right format.
+	'''
+
+	#check that all atom aassignments exist in all samples
+	atoms = ['C', 'H', 'O', 'N', 'S']
+
+	if not all([set(atoms) < set(f) for f in formulae]):
+		raise FormulaError(
+			'Some inputted formulae are missing C, H, O, N, or S assignment!')
+
+	#check that all atom letters are followed by a number
+		#loop through each atom, extract number, and store
+	for atom in atoms:
+		#make regex string
+		s = '((?<=' + atom + ')\d{1,2})'
+
+		#check that all formulae have a number for each atom
+		if any([re.search(s, f) is None for f in formulae]):
+			raise FormulaError(
+				'Some inputted formulae are missing %r value!' % atom)
+
+	#warn if phosphorus exists
+	if  any(['P' < set(f) for f in formulae]):
+		warnings.warn(
+			'Some inputted formulae have been assigned phosphorus. P'
+			' assignment is dubious and will be dropped from analysis!'
+			' (will still remain in sample name)')
+
+#define a function to check intensity and sample name format
+def _check_int(inteisities, sam_names = None)
+
+	return ints, sams
+
+
 #define function to generate chemical composition dataframe
 def _gen_chem_comp(formulae):
 	'''
@@ -219,6 +276,38 @@ def _gen_chem_comp(formulae):
 		`O`, `N`, and `S`. Shape [`nF` x 5].
 	'''
 
+	#make empty dataframe
+	atoms = ['C', 'H', 'O', 'N', 'S']
+	chem_comp = pd.DataFrame(index = formulae, columns = atoms)
+
+	#loop through each atom, extract number, and store
+	for atom in atoms:
+		#make regex string
+		s = '((?<=' + atom + ')\d{1,2})'
+
+		#extract and store
+		chem_comp[atom] = chem_comp.index.str.extract(s).astype(int)
+
+	#double check that all assignments are within bounds
+	mins = [1, 1, 1, 0, 0]
+	maxs = [45, 92, 25, 4, 2]
+
+	for atom, mi, ma in zip(atoms, mins, maxs):
+		#raise errors if outside bounds
+		mif = chem_comp[atom].min()
+		maf = chem_comp[atom].max()
+
+		if mif < mi:
+			raise FormulaError(
+				'Detected formula with %r = %r. Minimum is %r' 
+				% (atom, mif, mi)
+				)
+
+		if maf > ma:
+			raise FormulaError(
+				'Detected formula with %r = %r. Maximum is %r' 
+				% (atom, maf, ma)
+				)
 
 	return chem_comp
 
