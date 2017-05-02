@@ -19,6 +19,7 @@ __all__ = [
 
 import numpy as np
 import pandas as pd
+import re
 import warnings
 
 #import exceptions
@@ -248,7 +249,7 @@ def _check_forms(formulae):
 				'Some inputted formulae are missing %r value!' % atom)
 
 	#warn if phosphorus exists
-	if  any(['P' < set(f) for f in formulae]):
+	if  any(['P' in set(f) for f in formulae]):
 		warnings.warn(
 			'Some inputted formulae have been assigned phosphorus. P'
 			' assignment is dubious and will be dropped from analysis!'
@@ -328,7 +329,7 @@ def _check_int(intensities, formulae = None, sam_names = None):
 	#if array, make into dataframe and add index + column names
 	nF, nS = np.shape(intensities)
 
-	if inttype is 'ndarray':
+	if inttype == 'ndarray':
 		#raise formula error if necessary
 		if formulae is None:
 			raise FormulaError(
@@ -368,9 +369,9 @@ def _check_int(intensities, formulae = None, sam_names = None):
 
 	#pull formula names if necessary
 	if formulae is None:
-		forms = intensities.index.values
+		forms = ints.index.values
 
-	elif not all(intensities.index == formulae):
+	elif not all(ints.index == formulae):
 		raise FormulaError(
 			'formula list in `intensities` index and list of inputted'
 			' formulae do not match!')
@@ -380,9 +381,9 @@ def _check_int(intensities, formulae = None, sam_names = None):
 
 	#pull sample names if necessary
 	if sam_names is None:
-		sams = intensities.columns.values
+		sams = ints.columns.values
 
-	elif not all(intensities.columns == sam_names):
+	elif not all(ints.columns == sam_names):
 		raise SampleError(
 			'sample name list in `intensities` columns and list of inputted'
 			' samples do not match!')

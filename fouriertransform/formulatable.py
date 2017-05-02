@@ -30,7 +30,7 @@ from .formulatable_helper import(
 	_gen_chem_comp,
 	)
 
-class FormulaTable(objet):
+class FormulaTable(object):
 	__doc__ = '''
 	Class for generating formula tables for FT-ICR MS sample sets, generating
 	summary tables and statistics, and correlating formula abundances with
