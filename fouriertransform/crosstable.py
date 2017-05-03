@@ -1,5 +1,5 @@
 '''
-This module contains the FormulaTable class.
+This module contains the CrossTable class.
 '''
 
 from __future__ import(
@@ -8,7 +8,7 @@ from __future__ import(
 	)
 
 __docformat__ = 'restructuredtext en'
-__all__ = ['FormulaTable']
+__all__ = ['CrossTable']
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ from .exceptions import(
 	)
 
 #import helper functions
-from .formulatable_helper import(
+from .crosstable_helper import(
 	_calc_AImod,
 	_calc_category,
 	_calc_class,
@@ -30,7 +30,7 @@ from .formulatable_helper import(
 	_gen_chem_comp,
 	)
 
-class FormulaTable(object):
+class CrossTable(object):
 	__doc__ = '''
 	Class for generating formula tables for FT-ICR MS sample sets, generating
 	summary tables and statistics, and correlating formula abundances with
@@ -45,6 +45,11 @@ class FormulaTable(object):
 	Notes
 	-----
 
+	References
+	----------
+	Koch and Dittmar (2006), Rapid Comm. Mass. Spec., 20, 926-932.
+
+
 	See Also
 	--------
 
@@ -52,6 +57,19 @@ class FormulaTable(object):
 	--------
 
 	**Attributes**
+
+	AImod : pd.Series
+		Series of modified AI value for each formula, with index as formula
+		composition. Length `nF`.
+
+	cmpd_cat : pd.Series
+		Series of category of each formula (e.g. aliphatic, condensed
+		aromatic high oxygen content, etc.), with index as formula 
+		composition. Length `nF`.
+
+	cmpd_class : pd.Series
+		Series of class of each formula (i.e. CHO, CHON, CHOS, CHOP, CHONS), 
+		with index as formula composition. Length `nF`.
 
 	formulae : list
 		List of strings containing each molecular formula, in the format:
@@ -95,28 +113,34 @@ class FormulaTable(object):
 		self.nS = nS
 
 		#generate a chemical composition table
-		self._chem_comp = _gen_chem_comp(formulae)
+		self._chem_comp = _gen_chem_comp(forms)
+
+		#calculate compound category, class, and AImod
+		self.AImod = _calc_AImod(self)
+		self.cmpd_class = _calc_class(self)
+		self.cmpd_cat = _calc_category(self)
 
 	#define classmethod to generate instance from EnviroOrg output files
 	@classmethod
 	def from_eo(
-		names,
+		cls,
 		dir_path,
+		names = 'all',
 		rescale = None):
 		'''
-		Classmethod to generate a ``FormulaTable`` instance by inputting 
+		Classmethod to generate a ``CrossTable`` instance by inputting 
 		EnviroOrg files generated for each sample from a given sample set.
 
 		Parameters
 		----------
-		names : str or list
-			Either a list of strings containing the filenames to be imported or
-			the string 'all'. If 'all', method will automatically import all 
-			files within the provided directory.
-
 		dir_path : str
 			String containing the (absolute) path pointing to the directory
 			containing files to be imported.
+
+		names : str or list
+			Either a list of strings containing the filenames to be imported or
+			the string 'all'. If 'all', method will automatically import all 
+			files within the provided directory. Defaults to 'all'.
 
 		rescale : str or None
 			Tells the method if and how to rescale peak intensities for cross-
@@ -141,6 +165,15 @@ class FormulaTable(object):
 		References
 		----------
 		'''
+
+		#check that directory path and names exist
+
+		#combine all files into a single dataframe
+
+		#return CrossTable instance
+		return cls(intensities, formulae = None, sam_names = None)
+
+
 
 	#define method for generating a summary table
 	def generate_summary():

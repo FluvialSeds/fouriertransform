@@ -1,5 +1,5 @@
 '''
-This module contains helper functions for the FormulaTable class.
+This module contains helper functions for the CrossTable class.
 '''
 
 from __future__ import(
@@ -31,15 +31,15 @@ from .exceptions import(
 	)
 
 #define function to calculate modified aromaticity index
-def _calc_AImod(formtab):
+def _calc_AImod(ct):
 	'''
 	Calculates the modified armoaticity index for each formula contained
-	within a ``FormulaTable`` instance.
+	within a ``CrossTable`` instance.
 
 	Parameters
 	----------
-	formtab : ft.FormulaTable
-		``FormulaTable`` instance containing the formulae of interest.
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
 
 	Returns
 	-------
@@ -52,13 +52,13 @@ def _calc_AImod(formtab):
 	'''
 
 	#extract chemical compositions, name df for shorthand
-	df = formtab._chem_comp
+	df = ct._chem_comp
 
 	#calculate DBEai
 	DBEai = 1 + df['C'] - 0.5*df['O'] - df['S'] - 0.5*df['H']
 
 	#calculate Cai
-	Cai = df['C'] - 0.5*df['O'] - df['N'] - df['S']
+	Cai = df['C'] - 0.5*df['O'] - df['N'] - df['S'] - df['P']
 
 	#calculate AImod and name it
 	AImod = DBEai / Cai
@@ -70,10 +70,10 @@ def _calc_AImod(formtab):
 	return AImod
 
 #define function to calculate formula compound category
-def _calc_category(formtab):
+def _calc_category(ct):
 	'''
 	Calculates the compound category of each formula contained within a
-	``FormulaTable`` instance as:
+	``CrossTable`` instance as:
 
 		Aliphatic, high oxygen content \n
 		Aliphatic, low oxygen content \n
@@ -86,8 +86,8 @@ def _calc_category(formtab):
 
 	Parameters
 	----------
-	formtab : ft.FormulaTable
-		``FormulaTable`` instance containing the formulae of interest.
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
 
 	Returns
 	-------
@@ -100,11 +100,11 @@ def _calc_category(formtab):
 	'''
 
 	#extract chemical compositions and AImod and combine
-	ccs = formtab._chem_comp
-	ais = formtab.AImod
+	ccs = ct._chem_comp
+	ais = ct.AImod
 	df = pd.concat([ccs, ais], axis = 1)
 
-	#extract list of formulae stored in FormulaTable instance
+	#extract list of formulae stored in CrossTable instance
 	ccat = pd.Series(index = df.index, name = 'cmpd_cat')
 
 	#calculate indices for each category
@@ -171,15 +171,15 @@ def _calc_category(formtab):
 	return ccat
 
 #define function to calculate formula class
-def _calc_class(formtab):
+def _calc_class(ct):
 	'''
 	Calculates the compound class of each formula contained within a
-	``FormulaTable`` instance as CHO, CHON, CHOS, or CHONS.
+	``CrossTable`` instance as CHO, CHON, CHOS, CHOP, or CHONS.
 
 	Parameters
 	----------
-	formtab : ft.FormulaTable
-		``FormulaTable`` instance containing the formulae of interest.
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
 
 	Returns
 	-------
@@ -188,21 +188,23 @@ def _calc_class(formtab):
 	'''
 
 	#extract chemical compositions, name df for shorthand
-	df = formtab._chem_comp
+	df = ct._chem_comp
 
-	#extract list of formulae stored in FormulaTable instance
+	#extract list of formulae stored in CrossTable instance
 	cclass = pd.Series(index = df.index, name = 'cmpd_class')
 
 	#calculate indices using chemical composition logic
-	cho_ind = df[(df['N'] == 0) & (df['S'] == 0)].index
+	cho_ind = df[(df['N'] == 0) & (df['S'] == 0) & (df['P'] == 0)].index
 	chon_ind = df[(df['N'] != 0) & (df['S'] == 0)].index
 	chos_ind = df[(df['N'] == 0) & (df['S'] != 0)].index
+	chop_ind = df[(df['N'] == 0) & (df['S'] == 0) & (df['P'] != 0)].index
 	chons_ind = df[(df['N'] != 0) & (df['S'] != 0)].index
 
 	#set values for compound class
 	cclass[cho_ind] = 'CHO'
 	cclass[chon_ind] = 'CHON'
 	cclass[chos_ind] = 'CHOS'
+	cclass[chop_ind] = 'CHOP'
 	cclass[chons_ind] = 'CHONS'
 
 	return cclass
@@ -217,12 +219,6 @@ def _check_forms(formulae):
 	----------
 	formulae : list
 		List of strings containing formula chemical compositions.
-	
-	Warnings
-	--------
-	UserWarning
-		If inputted formulae contain phosphorus (which is not assigned in this
-		software), warns that P will be dropped from analysis.
 
 	Raises
 	------
@@ -231,11 +227,12 @@ def _check_forms(formulae):
 	'''
 
 	#check that all atom aassignments exist in all samples
-	atoms = ['C', 'H', 'O', 'N', 'S']
+	atoms = ['C', 'H', 'O', 'N', 'S', 'P']
 
 	if not all([set(atoms) < set(f) for f in formulae]):
 		raise FormulaError(
-			'Some inputted formulae are missing C, H, O, N, or S assignment!')
+			'Some inputted formulae are missing C, H, O, N, S, or P'
+			' assignment!')
 
 	#check that all atom letters are followed by a number
 		#loop through each atom, extract number, and store
@@ -247,13 +244,6 @@ def _check_forms(formulae):
 		if any([re.search(s, f) is None for f in formulae]):
 			raise FormulaError(
 				'Some inputted formulae are missing %r value!' % atom)
-
-	#warn if phosphorus exists
-	if  any(['P' in set(f) for f in formulae]):
-		warnings.warn(
-			'Some inputted formulae have been assigned phosphorus. P'
-			' assignment is dubious and will be dropped from analysis!'
-			' (will still remain in sample name)')
 
 #define a function to check intensity and sample name format
 def _check_int(intensities, formulae = None, sam_names = None):
@@ -393,7 +383,6 @@ def _check_int(intensities, formulae = None, sam_names = None):
 
 	return ints, forms, sams
 
-
 #define function to generate chemical composition dataframe
 def _gen_chem_comp(formulae):
 	'''
@@ -404,17 +393,17 @@ def _gen_chem_comp(formulae):
 	----------
 	formulae : list
 		List of strings containing each molecular formula, in the format:
-		C(1-45)H(1-92)O(1-25)N(0-4)S(0-2). Length `nF`.
+		C(1-99)H(0-99)O(0-99)N(0-9)S(0-9)P(0-9). Length `nF`.
 
 	Returns
 	-------
 	chem_comp : pd.DataFrame
 		Dataframe of chemical compositions, split into columns for `C`, `H`,
-		`O`, `N`, and `S`. Shape [`nF` x 5].
+		`O`, `N`, `S`, and `P`. Shape [`nF` x 6].
 	'''
 
 	#make empty dataframe
-	atoms = ['C', 'H', 'O', 'N', 'S']
+	atoms = ['C', 'H', 'O', 'N', 'S', 'P']
 	chem_comp = pd.DataFrame(index = formulae, columns = atoms)
 
 	#loop through each atom, extract number, and store
@@ -426,8 +415,8 @@ def _gen_chem_comp(formulae):
 		chem_comp[atom] = chem_comp.index.str.extract(s).astype(int)
 
 	#double check that all assignments are within bounds
-	mins = [1, 1, 1, 0, 0]
-	maxs = [45, 92, 25, 4, 2]
+	mins = [1, 0, 0, 0, 0, 0]
+	maxs = [99, 99, 99, 9, 9, 9]
 
 	for atom, mi, ma in zip(atoms, mins, maxs):
 		#raise errors if outside bounds
@@ -447,8 +436,3 @@ def _gen_chem_comp(formulae):
 				)
 
 	return chem_comp
-
-
-
-
-
