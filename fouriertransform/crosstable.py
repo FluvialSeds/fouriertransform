@@ -21,14 +21,8 @@ from .exceptions import(
 	)
 
 #import helper functions
-from .crosstable_helper import(
-	_calc_AImod,
-	_calc_category,
-	_calc_class,
-	_check_forms,
-	_check_int,
-	_gen_chem_comp,
-	)
+from .crosstable_helper import *
+
 
 class CrossTable(object):
 	__doc__ = '''
@@ -125,7 +119,7 @@ class CrossTable(object):
 	def from_eo(
 		cls,
 		dir_path,
-		names = 'all',
+		file_names = 'all',
 		rescale = None):
 		'''
 		Classmethod to generate a ``CrossTable`` instance by inputting 
@@ -137,7 +131,7 @@ class CrossTable(object):
 			String containing the (absolute) path pointing to the directory
 			containing files to be imported.
 
-		names : str or list
+		file_names : str or list
 			Either a list of strings containing the filenames to be imported or
 			the string 'all'. If 'all', method will automatically import all 
 			files within the provided directory. Defaults to 'all'.
@@ -166,9 +160,8 @@ class CrossTable(object):
 		----------
 		'''
 
-		#check that directory path and names exist
-
 		#combine all files into a single dataframe
+		intensities = _combine_EO_samples(dir_path, file_names)
 
 		#return CrossTable instance
 		return cls(intensities, formulae = None, sam_names = None)

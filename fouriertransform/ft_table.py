@@ -26,7 +26,6 @@ files = next(os.walk(path))[2]
 eo_files = [f for f in files if '.csv.xls' in f]
 
 fvars = [
-	'Noise',
 	'Exp mz',
 	'Recal mz',
 	'Theor mz',
@@ -49,15 +48,18 @@ forms = [
 	'nO',
 	'S',
 	'nS',
+	'P',
+	'nP'
 	]
 
 
 df = pd.read_csv(path + '/' + eo_files[5],
 	skiprows = 2,
+	index_col = 0,
 	header = None)
 
-#drop P columns and Null column
-df = df.loc[:,:19]
+#drop Null column
+df = df.loc[:,:21]
 df.columns = fvars + forms
 
 #calculate formula names

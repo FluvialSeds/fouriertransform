@@ -18,6 +18,12 @@ class DimError(ftException):
 	pass
 
 
+class FileError(ftException):
+	'''
+	If attempting to import a file that does not exist.
+	'''
+	pass
+
 class FormulaError(ftException):
 	'''
 	Detected formula is outside of the assignment bounds.

@@ -14,10 +14,13 @@ __all__ = [
 	'_calc_class',
 	'_check_forms',
 	'_check_int',
+	'_combine_EO_samples',
 	'_gen_chem_comp',
+	'_input_EO_sample',
 	]
 
 import numpy as np
+import os
 import pandas as pd
 import re
 import warnings
@@ -25,6 +28,7 @@ import warnings
 #import exceptions
 from .exceptions import(
 	DimError,
+	FileError,
 	FormulaError,
 	LengthError,
 	SampleError,
@@ -383,6 +387,73 @@ def _check_int(intensities, formulae = None, sam_names = None):
 
 	return ints, forms, sams
 
+#define function to combine EnviroOrg samples into single dataframe
+def _combine_EO_samples(dir_path, file_names):
+	'''
+	Generates an intensities table for multiple EnviroOrg files.
+
+	Parameters
+	----------
+	dir_path : str
+		String containing the path pointing to the directory containing 
+		files to be imported.
+
+	file_names : str or list
+		Either a list of strings containing the filenames to be imported or
+		the string 'all'. If 'all', method will automatically import all 
+		files within the provided directory. Defaults to 'all'.
+	
+	Returns
+	-------
+	intensities : pd.DataFrame
+		DataFrame containing the MS intensities of each formula within each 
+		sample. Shape [`nF` x `nS`].
+
+	Raises
+	------
+	FileError
+		If the directory path does not exist.
+	'''
+
+	nS = len(file_names)
+
+	#check directory path
+	exists = os.path.isdir(dir_path)
+
+	if not exists:
+		raise FileError(
+			'Attempting to search for files in directory: %r but it does not'
+			' exist!' % dir_path)
+
+	#if file names is all, import all names
+	if file_names == 'all':
+		file_names = next(os.walk(dir_path))[2]
+
+	#combine dir_name and name to make absolute paths
+	path_names = [dir_path + '/' + s for s in file_names]
+
+	#make empty dataframe
+	intensities = pd.DataFrame()
+
+	#loop through, import and store
+	for p, f in zip(path_names, file_names):
+		#drop .csv from sample name for nomenclature brevity
+		s = re.sub('.csv$', '', f)
+		
+		#import
+		s_int = _input_EO_sample(p, f, norm = False)
+
+		#store
+		intensities = pd.concat([intensities, s_int], axis = 1)
+
+	#fill missing data with zeros and rescale so biggest peak = 100
+	intensities.fillna(0, inplace = True)
+
+	m = intensities.max().max()
+	intensities = intensities*100/m
+
+	return intensities
+
 #define function to generate chemical composition dataframe
 def _gen_chem_comp(formulae):
 	'''
@@ -436,3 +507,110 @@ def _gen_chem_comp(formulae):
 				)
 
 	return chem_comp
+
+#define function to load EnviroOrg sample output file
+def _input_EO_sample(file, sam_name, norm = False):
+	'''
+	Function to input a single sample from an EnviroOrg output file and to
+	return a pd.DataFrame of the data.
+
+	Parameters
+	----------
+	file : str
+		String to the (absolute) path of the file containing the EnviroOrg
+		data for a given sample to be summarized.
+
+	sam_name : str
+		String of the name of a given file, to be used for cross table.
+
+	norm : boolean
+		Tells the function whether or not to re-normalize the relative
+		intensities such that they sum to unity. Defaults to `False`.
+
+	Returns
+	-------
+	sam_int : pd.Series
+		Series of the intensities of each formula for a given sample.
+
+	Raises
+	------
+	FileError
+		If the inputted file does not exist or is not in .csv format.
+	'''
+
+	#check that file exists and is a file, and check extension is .csv
+	exists = os.path.isfile(file)
+
+	if not exists:
+		raise FileError(
+			'Looking for file named: %r but this file does not exist!' % file)
+
+	elif '.csv' not in file:
+		raise FileError(
+			'Inputted file is not a .csv!')
+
+	#pre-allocate column names
+	fvars = [
+		'Exp_mz',
+		'Recal_mz',
+		'Theor_mz',
+		'Error',
+		sam_name,
+		'S2N',
+		'DBE',
+		'HC',
+		'OC']
+
+	forms = ['C',
+		'nC',
+		'H',
+		'nH',
+		'N',
+		'nN',
+		'O',
+		'nO',
+		'S',
+		'nS',
+		'P',
+		'nP']
+
+	cols = fvars + forms
+
+	#import file as dataframe (skip first 2 rows -- are garbage in EO output)
+	df = pd.read_csv(file,
+		skiprows = 2,
+		index_col = 0,
+		header = None)
+
+	#drop final column (is all Nan in EO output) and name columns
+	df = df.loc[:,:21]
+	df.columns = cols
+
+	#generate formula names and rename index
+	#need to re-order column names to get in CHONSP format (EO output is off)
+	fr = ['C','nC','H','nH','O','nO','N','nN','S','nS','P','nP']
+
+	form_names = df[fr].apply(lambda x: ''.join(x.astype('str')), axis = 1)
+	df.index = form_names
+	df.index.name = 'Formula'
+
+	#only retain necessary columns
+	sam_int = df[sam_name]
+
+	#rescale if necessary
+	if norm:
+		sam_int = sam_int/sam_int.sum()
+
+	return sam_int
+
+
+
+
+
+
+
+
+
+
+
+

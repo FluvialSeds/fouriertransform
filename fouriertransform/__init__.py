@@ -30,6 +30,6 @@ __docformat__ = 'restructuredtext en'
 
 
 #import formulatable classes
-from .formulatable import(
-	FormulaTable,
+from .crosstable import(
+	CrossTable,
 	)
