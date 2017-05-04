@@ -88,7 +88,12 @@ class CrossTable(object):
 
 	'''
 
-	def __init__(self, intensities, formulae = None, sam_names = None):
+	def __init__(
+		self, 
+		intensities, 
+		formulae = None,
+		rescale = None, 
+		sam_names = None):
 
 		#check that intensities and formulae are in right format
 		ints, forms, sams = _check_int(
@@ -98,6 +103,20 @@ class CrossTable(object):
 
 		nF, nS = np.shape(ints)
 		_check_forms(forms)
+
+		#rescale intensities if necessary
+		if rescale in ['fraction', 'Fraction']:
+			m = ints.sum()
+			ints = ints/m
+
+		elif rescale in ['max_peak', 'Max_peak', 'Max_Peak']:
+			m = ints.max().max()
+			ints = ints*100/m
+
+		elif rescale is not None:
+			raise ValueError(
+				'Rescale value of %r is not recognized. Must be `fraction`,'
+				' `max_peak`, or `None`.' % rescale)
 
 		#store results
 		self.intensities = ints
@@ -149,24 +168,40 @@ class CrossTable(object):
 
 		Raises
 		------
+		FileError
+			If the directory path does not exist.
+
+		FileError
+			If the inputted file does not exist or is not in .csv format.
+
+		ValueError
+			If the value for `rescale` is not 'fraction', 'max_peak', or 
+			`None`.
 
 		Notes
 		-----
-
-		See Also
-		--------
+		This function requires that inputted files are in .csv format. File
+		names will be used as sample names in resulting cross table (omitting
+		the .csv extension), so using shortened filenames is encouraged for
+		brevity.
 
 		References
 		----------
+		EnviroOrg_ software, National High Magnetic Field Laboratory,
+		Tallahassee, FL.
+
+		.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
 		'''
 
 		#combine all files into a single dataframe
 		intensities = _combine_EO_samples(dir_path, file_names)
 
 		#return CrossTable instance
-		return cls(intensities, formulae = None, sam_names = None)
-
-
+		return cls(
+			intensities, 
+			formulae = None, 
+			rescale = rescale,
+			sam_names = None)
 
 	#define method for generating a summary table
 	def generate_summary():

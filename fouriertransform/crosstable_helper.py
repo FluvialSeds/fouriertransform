@@ -441,16 +441,13 @@ def _combine_EO_samples(dir_path, file_names):
 		s = re.sub('.csv$', '', f)
 		
 		#import
-		s_int = _input_EO_sample(p, f, norm = False)
+		s_int = _input_EO_sample(p, s, norm = False)
 
 		#store
 		intensities = pd.concat([intensities, s_int], axis = 1)
 
 	#fill missing data with zeros and rescale so biggest peak = 100
 	intensities.fillna(0, inplace = True)
-
-	m = intensities.max().max()
-	intensities = intensities*100/m
 
 	return intensities
 
