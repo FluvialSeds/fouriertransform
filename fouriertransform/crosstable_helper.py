@@ -261,6 +261,10 @@ def _calc_pct(ct, cols, weights):
 	ct : ft.CrossTable
 		``CrossTable`` instance containing the formulae of interest.
 
+	cols : list
+		List of column names to be calculated (required input for indexing
+		purposes. Columns get mis-aligned if omitted).
+
 	weights : str
 		String of weights to use for %RA calculates, either compound
 		categories or classes. Inputed from the _gen_sum_tab function.
