@@ -12,10 +12,13 @@ __all__ = [
 	'_calc_AImod',
 	'_calc_category',
 	'_calc_class',
+	'_calc_mass',
+	'_calc_pct',
 	'_check_forms',
 	'_check_int',
 	'_combine_EO_samples',
 	'_gen_chem_comp',
+	'_gen_sum_tab',
 	'_input_EO_sample',
 	]
 
@@ -101,6 +104,13 @@ def _calc_category(ct):
 	References
 	----------
 	Santi-Temkiv et al. (2013), PLoS One, doi:10.1371/journal.pone.0053550.
+
+	Notes
+	-----
+	This is the only location where compound categories are defined. All other
+	functions are dependent on the defintions provided here. If categories
+	need to be changed in the future (potentially user-defined categories
+	option?), this is the only place to do so!
 	'''
 
 	#extract chemical compositions and AImod and combine
@@ -212,6 +222,100 @@ def _calc_class(ct):
 	cclass[chons_ind] = 'CHONS'
 
 	return cclass
+
+#define a function to calculate the mass of each compound
+def _calc_mass(ct):
+	'''
+	Calculates the compound masses.
+
+	Parameters
+	----------
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
+
+	Returns
+	-------
+	cmass : pd.Series
+		Series of the resulting masses. Length `nF`.
+	'''
+
+	#extract chemical compositions, name df for shorthand
+	df = ct._chem_comp
+
+	cmass = 12.01*df['C'] + \
+		1.01*df['H'] + \
+		15.99*df['O'] + \
+		14.01*df['N'] + \
+		32.07*df['S'] + \
+		30.97*df['P']
+
+	return cmass
+
+#define a function to calculate percentages for summary table
+def _calc_pct(ct, weights):
+	'''
+	Calculates percentages for generating a summary table.
+
+	Parameters
+	----------
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
+
+	weights : str
+		String of weights to use for %RA calculates, either compound
+		categories or classes. Inputed from the _gen_sum_tab function.
+
+	Returns
+	-------
+	pcts : pd.DataFrame
+		Resulting dataframe of calculated percentages for each sample.
+
+	Raises
+	------
+	AssertionError
+		If percentages do not add up to 100.
+
+	'''
+
+	#call intensites df for shorthand
+	df = ct.intensities
+
+	#calculate totals
+	tot_N = np.sum(df > 0)
+	tot_int = np.sum(df)
+
+	#extract class / category names
+	names = weights.unique()
+
+	#make empty dataframe of results
+	pcts = pd.DataFrame(index = ct.sam_names)
+
+	#loop through each class / category and store results
+	for n in names:
+
+		#extract compounds within class/category
+		ind = np.where(weights == n)[0]
+		cforms = df.ix[ind]
+
+		#calculate class/category formula numbers and intensities
+		c_N = np.sum(cforms > 0)
+		c_int = np.sum(cforms)
+
+		#calculate percentages
+		c_pct_N = 100*c_N/tot_N
+		c_pct_RA = 100*c_int/tot_int
+
+		#store results
+		pcts[n + '_%N'] = c_pct_N
+		pcts[n + '_%RA'] = c_pct_RA
+
+	#assert that it all adds up to 200 (sum of N-based and RA-based)
+	assert pcts.sum(axis = 1) == 200, \
+		'Calculated percentages do not add up! Something is not assigned a'
+		' compound class / category!'
+
+
+	return pcts
 
 #define a function to check formulae format
 def _check_forms(formulae):
@@ -504,6 +608,72 @@ def _gen_chem_comp(formulae):
 				)
 
 	return chem_comp
+
+#define function to summarize CrossTable (i.e. calculate percentages)
+def _gen_sum_tab(ct):
+	'''
+	Generates a summary table for a given `CrossTable` instance.
+
+	Parameters
+	----------
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
+
+	Returns
+	-------
+	sum_df : pd.DataFrame
+		DataFrame containing the summary information for the sample set
+		contained within a given ``CrossTable`` isntance.
+	'''
+
+	#define constants
+	nF = ct.nF
+	nS = ct.nS
+	tot_N = np.sum(ct.intensities > 0)
+	tot_int = np.sum(ct.intensities)
+
+	#extract categories and classes
+	ccats = ct.cmpd_cat.unique()
+	ccls = ct.cmpd_class.unique()
+
+	#append %N or for column names
+	ccats_N = [c + '_%N' for c in ccats]
+	ccats_RA = [c + '_%RA' for c in ccats]
+
+	ccls_N = [c + '_%N' for c in ccls]
+	ccls_RA = [c + '_%RA' for c in ccls]
+
+	#make list of additional variables to summarize
+	mets = [
+		'Tot_N_formulae',
+		'Tot_AveMass_N',
+		'Tot_AveMass_RA'
+		]
+
+	#concatenate everything into columns list
+	cls_mets = ccls_N + ccls_RA
+	cat_mets = ccats_N + ccats_RA
+	
+	cols = mets + cls_mets + cat_mets
+
+	#make empty dataframe
+	sum_df = pd.DataFrame(index = ct.sam_names, columns = cols)
+
+	#populate matrix
+	exists = ct.intensities > 0
+
+	sum_df['Tot_N_formulae'] = tot_N
+
+	sum_df['Tot_AveMass_N'] = \
+		np.sum(exists.multiply(ct.cmpd_mass, axis = 0))/tot_N
+
+	sum_df['Tot_AveMass_RA'] = \
+		np.sum(ct.intensities.multiply(ct.cmpd_mass, axis = 0))/tot_int
+
+	sum_df[cls_mets] = _calc_pct(ct, ct.cmpd_class)
+	sum_df[cat_mets] = _calc_pct(ct, ct.cmpd_cat)
+
+	return sum_df
 
 #define function to load EnviroOrg sample output file
 def _input_EO_sample(file, sam_name, norm = False):

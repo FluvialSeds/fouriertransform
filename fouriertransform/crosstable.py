@@ -43,6 +43,12 @@ class CrossTable(object):
 	----------
 	Koch and Dittmar (2006), Rapid Comm. Mass. Spec., 20, 926-932.
 
+	Santi-Temkiv et al. (2013), PLoS One, doi:10.1371/journal.pone.0053550.
+
+	EnviroOrg_ software, National High Magnetic Field Laboratory,
+	Tallahassee, FL.
+
+	.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
 
 	See Also
 	--------
@@ -64,6 +70,10 @@ class CrossTable(object):
 	cmpd_class : pd.Series
 		Series of class of each formula (i.e. CHO, CHON, CHOS, CHOP, CHONS), 
 		with index as formula composition. Length `nF`.
+
+	cmpd_mass : pd.Series
+		Series of the mass of each formula, with index as formula composition.
+		Length `nF`.
 
 	formulae : list
 		List of strings containing each molecular formula, in the format:
@@ -128,7 +138,8 @@ class CrossTable(object):
 		#generate a chemical composition table
 		self._chem_comp = _gen_chem_comp(forms)
 
-		#calculate compound category, class, and AImod
+		#calculate compound mass, category, class, and AImod
+		self.cmpd_mass = _calc_mass(self)
 		self.AImod = _calc_AImod(self)
 		self.cmpd_class = _calc_class(self)
 		self.cmpd_cat = _calc_category(self)
@@ -162,9 +173,6 @@ class CrossTable(object):
 			for a given sample is equal to unity. If 'max_peak', scales such
 			that the most intense peak detected in any sample is equal to 100
 			and all other peaks are scaled accordingly. Defaults to `None`.
-
-		Warnings
-		--------
 
 		Raises
 		------
@@ -204,7 +212,7 @@ class CrossTable(object):
 			sam_names = None)
 
 	#define method for generating a summary table
-	def generate_summary():
+	def generate_summary(self):
 		'''
 		Method for generating a summary table of the formula table, including
 		relative compound class and category abundances (both by formula
@@ -232,6 +240,11 @@ class CrossTable(object):
 		References
 		----------
 		'''
+
+		sum_df = _gen_sum_tab(self)
+
+		return sum_df
+
 
 	#define method for plotting a sample van Krevelen
 	def sample_vankrevelen(name, ax = None, type = 'class'):
