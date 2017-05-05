@@ -214,10 +214,10 @@ class CrossTable(object):
 	#define method for generating a summary table
 	def generate_summary(self):
 		'''
-		Method for generating a summary table of the formula table, including
-		relative compound class and category abundances (both by formula
-		number and by MS intensity), total formulae detected, and average m/z
-		(separated into classes and categories).
+		Method for generating a summary table of the ``CrossTable`` instance, 
+		including relative compound class and category abundances (both by 
+		formula number and by MS intensity), total formulae detected, and 
+		average m/z (both by formula number and by MS intensity).
 
 		Parameters
 		----------
@@ -247,7 +247,7 @@ class CrossTable(object):
 
 
 	#define method for plotting a sample van Krevelen
-	def sample_vankrevelen(name, ax = None, type = 'class'):
+	def plot_sample_vk(sam_name, ax = None, type = 'class'):
 		'''
 		Method for generating a van Krevelen plot for a given sample within
 		the sample set. Can color-code points either according to compound
@@ -276,7 +276,37 @@ class CrossTable(object):
 		'''
 
 	#define method for plotting a sample van Krevelen
-	def correlation_vankrevelen(
+	def plot_difference_vk(sam_name1, sam_name2, ax = None, type = 'class'):
+		'''
+		Method for generating a van Krevelen plot of the difference between
+		two samples within a given sample set. Can color-code points either 
+		according to compound class (i.e. CHO, CHON, CHOS) or according to 
+		peak intensity.
+
+		Parameters
+		----------
+
+		Returns
+		-------
+
+		Warnings
+		--------
+
+		Raises
+		------
+
+		Notes
+		-----
+
+		See Also
+		--------
+
+		References
+		----------
+		'''
+
+	#define method for plotting a sample van Krevelen
+	def plot_correlation_vk(
 		env_param, 
 		ax = None, 
 		fraction_present = 1.0,

@@ -252,7 +252,7 @@ def _calc_mass(ct):
 	return cmass
 
 #define a function to calculate percentages for summary table
-def _calc_pct(ct, weights):
+def _calc_pct(ct, cols, weights):
 	'''
 	Calculates percentages for generating a summary table.
 
@@ -288,7 +288,7 @@ def _calc_pct(ct, weights):
 	names = weights.unique()
 
 	#make empty dataframe of results
-	pcts = pd.DataFrame(index = ct.sam_names)
+	pcts = pd.DataFrame(index = ct.sam_names, columns = cols)
 
 	#loop through each class / category and store results
 	for n in names:
@@ -669,8 +669,8 @@ def _gen_sum_tab(ct):
 	sum_df['Tot_AveMass_RA'] = \
 		np.sum(ct.intensities.multiply(ct.cmpd_mass, axis = 0))/tot_int
 
-	sum_df[cls_mets] = _calc_pct(ct, ct.cmpd_class)
-	sum_df[cat_mets] = _calc_pct(ct, ct.cmpd_cat)
+	sum_df[cls_mets] = _calc_pct(ct, cls_mets, ct.cmpd_class)
+	sum_df[cat_mets] = _calc_pct(ct, cat_mets, ct.cmpd_cat)
 
 	return sum_df
 
