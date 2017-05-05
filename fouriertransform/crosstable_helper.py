@@ -310,10 +310,9 @@ def _calc_pct(ct, weights):
 		pcts[n + '_%RA'] = c_pct_RA
 
 	#assert that it all adds up to 200 (sum of N-based and RA-based)
-	assert pcts.sum(axis = 1) == 200, \
-		'Calculated percentages do not add up! Something is not assigned a'
-		' compound class / category!'
-
+	assert (pcts.sum(axis = 1) - 200 < 1e-6).all(), \
+		'Calculated percentages do not add up within 1 part per million!' \
+		' Something is not assigned a compound class / category!'
 
 	return pcts
 
