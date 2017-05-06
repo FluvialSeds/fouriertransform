@@ -127,8 +127,8 @@ class CrossTable(object):
 
 		elif rescale is not None:
 			raise ValueError(
-				'Rescale value of %r is not recognized. Must be `fraction`,'
-				' `max_peak`, or `None`.' % rescale)
+				'Rescale value of %r is not recognized. Must be "fraction",'
+				' "max_peak", or "None".' % rescale)
 
 		#store results
 		self.intensities = ints
@@ -383,11 +383,13 @@ class CrossTable(object):
 
 		return ax
 
-
-
-
 	#define method for plotting a sample van Krevelen
-	def plot_difference_vk(sam_name1, sam_name2, ax = None, type = 'class'):
+	def plot_difference_vk(
+		self,
+		sam_name1, 
+		sam_name2, 
+		ax = None,
+		**kwargs):
 		'''
 		Method for generating a van Krevelen plot of the difference between
 		two samples within a given sample set. Can color-code points either 
@@ -396,25 +398,108 @@ class CrossTable(object):
 
 		Parameters
 		----------
+		sam_name1 : str
+			String of the name of the sample containing all formulae of 
+			interest. (i.e. formulae present in this sample but not in 
+			`sam_name2` will be plotted). Must be contained within the 
+			``CrossTable`` instance.
+
+		sam_name2 : str
+			String of the name of the sample to be subtracted from
+			`sam_name1`. Formulae absent from this sample but present in
+			`sam_name1` will be plotted. Must be contained within the 
+			``CrossTable`` instance.
+
+		ax : None or plt.axis
+			Axis to plot on. If `None`, creates an axis.
 
 		Returns
 		-------
-
-		Warnings
-		--------
+		ax : plt.axis
+			Axis containing the van Krevelen plot of interest.
 
 		Raises
 		------
-
-		Notes
-		-----
+		SampleError
+			If sam_name is not present within the ``CrossTable`` instance.
 
 		See Also
 		--------
+		plot_correlation_vk
+			Function for plotting correlation coefficients for individual
+			chemical formulae relative to a given environmental controlling
+			parameter.
 
-		References
-		----------
+		plot_sample_vk
+			Function for plotting a van Krevelen diagram for a single sample,
+			color coded either by peak intensity or by compound class.
 		'''
+
+		#check that sample names exist
+		if sam_name1 not in self.sam_names:
+			raise SampleError(
+				'Sample name %r is not contained within the CrossTable!' 
+				% sam_name1)
+
+		elif sam_name2 not in self.sam_names:
+			raise SampleError(
+				'Sample name %r is not contained within the CrossTable!' 
+				% sam_name2)
+
+
+		#make axis if necessary
+		if ax is None:
+			fig, ax = plt.subplots(1,1)
+
+		#set axis labels
+		ax.set_ylabel('H/C')
+		ax.set_xlabel('O/C')
+
+		#calculate index in sam_name1 but missing from sam_name2
+		ind = self.intensities[
+			(self.intensities[sam_name1] > 0) & 
+			(self.intensities[sam_name2] == 0)
+			].index
+
+		#calculate H/C and O/C for formulae contained within the sample
+		HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
+		OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
+
+		#extract all unique classes
+		ccls = self.cmpd_class.unique()
+		classes = self.cmpd_class[ind]
+
+		#make a list of colors, extending to all possible classes
+		colors = [
+			[.071, 0, .40], #CHO
+			[.431, .082, .035], #CHON
+			[.769, .455, 0], #CHOS
+			[0, .561, .569], #CHOP
+			[.133, .376, .035], #CHONS
+			]
+
+		#loop through and plot
+		for i, cc in enumerate(ccls):
+			#extract indices
+			ci = classes[classes == cc].index
+
+			#plot
+			ax.scatter(
+				OC[ci],
+				HC[ci],
+				c = colors[i],
+				label = cc,
+				**kwargs)
+
+		#add legend
+		ax.legend(
+			loc = 'best',
+			framealpha = 1,
+			scatterpoints = 1,
+			markerscale = 2,
+			fontsize = 'small')
+
+		return ax
 
 	#define method for plotting a sample van Krevelen
 	def plot_correlation_vk(
