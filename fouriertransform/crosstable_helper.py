@@ -14,6 +14,8 @@ __all__ = [
 	'_calc_class',
 	'_calc_mass',
 	'_calc_pct',
+	'_calc_pearson',
+	'_calc_spearman',
 	'_check_forms',
 	'_check_int',
 	'_combine_EO_samples',
@@ -27,6 +29,8 @@ import os
 import pandas as pd
 import re
 import warnings
+
+from scipy import stats
 
 #import exceptions
 from .exceptions import(
@@ -319,6 +323,103 @@ def _calc_pct(ct, cols, weights):
 		' Something is not assigned a compound class / category!'
 
 	return pcts
+
+#define a function to calculate pearson correlations and retain sig. forms.
+def _calc_pearson(intensities, env_param):
+	'''
+	Calculates the Pearson correlation coefficients and retains statistically
+	significant compounds (p <= 0.05).
+
+	Parameters
+	----------
+	intensities : pd.DataFrame
+		Dataframe of peak intensities for a given ``CrossTable`` instance.
+
+	env_param : list, array, or series
+		List-like, contains the values of a given environmental parameter to
+		correlate with.
+
+	Returns
+	-------
+	ind_sig : pd.Index
+		Index of the statistically significant formulae.
+
+	rhos : pd.Series
+		Series of the correlation coefficient values
+
+	pvals : pd.Series
+		Series of the correlation significance values.
+	'''
+
+	#get into pandas format
+	X = pd.DataFrame(intensities)
+	Y = pd.Series(env_param, index = X.columns)
+	nS = len(env_param)
+
+	#calculate rho
+	num = np.mean(X*Y, axis = 1) - np.mean(X, axis = 1)*np.mean(Y)
+	denom = (np.mean(X**2, axis = 1) - np.mean(X, axis = 1)**2)**0.5 * \
+		(np.mean(Y**2) - np.mean(Y)**2)**0.5
+
+	#store rho values
+	rhos = num / denom
+
+	# #calculate z scores
+	# z = np.arctanh(rhos)*(nS - 3)**0.5
+
+	# #calculate two-sided pvals from z test
+	# pvals = 2*(1 - stats.norm.cdf(np.abs(z)))
+
+	#calculate t scores
+	t = rhos / ((1 - rhos**2)/(nS - 2))**0.5
+	p = 2*(1-stats.t.cdf(np.abs(t),nS-2))
+
+	pvals = pd.Series(p, index = rhos.index)
+
+
+	return rhos, pvals
+
+#define a function to calculate spearman correlations and retain sig. forms.
+def _calc_spearman(intensities, ind, env_param):
+	'''
+	Calculates the Spearman correlation coefficients and retains statistically
+	significant compounds (p <= 0.05).
+
+	Parameters
+	----------
+	intensities : pd.DataFrame
+		Dataframe of peak intensities for a given ``CrossTable`` instance.
+
+	env_param : list, array, or series
+		List-like, contains the values of a given environmental parameter to
+		correlate with.
+
+	Returns
+	-------
+	ind_sig : pd.Index
+		Index of the statistically significant formulae.
+
+	rhos : pd.Series
+		Series of the correlation coefficient values
+
+	pvals : pd.Series
+		Series of the correlation significance values.
+	'''
+
+	#pre-allocate
+	rhos = pd.Series(index = ind, name = 'rho_vals')
+	pvals = pd.Series(index = ind, name = 'p_vals')
+
+	#loop through each formula and store
+	for i in ind:
+		rhos.ix[i], pvals.ix[i] = spearmanr(intensities.ix[i], env_param)
+
+	#calculate significant indices and only retain those formulae
+	ind_sig = pvals[pvals <= 0.05].index
+	rhos = rhos[ind_sig]
+	pvals = pvals[ind_sig]
+
+	return ind_sig, rhos, pvals
 
 #define a function to check formulae format
 def _check_forms(formulae):

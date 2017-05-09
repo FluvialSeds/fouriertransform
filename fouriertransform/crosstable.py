@@ -2,6 +2,9 @@
 This module contains the CrossTable class.
 '''
 
+#TODO: ADD NOSC TO SUMMARY TABLE!
+#TODO: ADD DBE TO SUMMARY TABLE!
+
 from __future__ import(
 	division,
 	print_function,
@@ -19,6 +22,7 @@ import warnings
 #import exceptions
 from .exceptions import(
 	FormulaError,
+	LengthError,
 	SampleError
 	)
 
@@ -311,7 +315,8 @@ class CrossTable(object):
 		if ax is None:
 			fig, ax = plt.subplots(1,1)
 
-		#set axis labels
+		#set axis labels and title
+		ax.set_title(sam_name + ' ' + plot_type)
 		ax.set_ylabel('H/C')
 		ax.set_xlabel('O/C')
 
@@ -451,7 +456,8 @@ class CrossTable(object):
 		if ax is None:
 			fig, ax = plt.subplots(1,1)
 
-		#set axis labels
+		#set axis labels and title
+		ax.set_title(sam_name1 + ' - ' + sam_name2 + ' compound classes')
 		ax.set_ylabel('H/C')
 		ax.set_xlabel('O/C')
 
@@ -503,11 +509,17 @@ class CrossTable(object):
 
 	#define method for plotting a sample van Krevelen
 	def plot_correlation_vk(
+		self,
 		env_param, 
 		ax = None, 
 		fraction_present = 1.0,
-		corr_coeff = 'Spearman'):
+		corr_coeff = 'Spearman',
+		**kwargs):
 		'''
+
+		#TODO: ALLOW FOR MISSING SAMPLES! ADD missing = 'drop' OPTION
+		#TODO: FASTER SPEARMAN CALCULATION???
+
 		Method for generating a van Krevelen plot to compare individual
 		formula relative abundances against environmental parameters of
 		interest. Can handle peaks that are only present in a subset of
@@ -515,25 +527,123 @@ class CrossTable(object):
 
 		Parameters
 		----------
+		env_param : list, array, or pd.Series
+			List, array, or series of values for a particular environmental 
+			variable. If list, assumes values are in the same order as sample 
+			names in the ``CrossTable`` instance. Length `nS`.
+
+		ax : None or plt.axis
+			Axis to plot on. If `None`, creates an axis.
+
+		fraction_present : float
+			The fraction of total samples in which a formula must be present
+			in order to be considered for correlation, ranging between 0.0
+			and 1.0.
+
+		corr_coeff : str
+			String saying which statistical method to use for correlation.
+			Currently accepts:
+
+				Pearson, \n
+				Spearman \n
 
 		Returns
 		-------
-
-		Warnings
-		--------
+		ax : plt.axis
+			Axis containing the van Krevelen plot of interest.
 
 		Raises
 		------
+		TypeError
+			If `env_param` is list, np.ndarray, or pd.Series.
 
-		Notes
-		-----
+		LengthError
+			If `env_param` is not of length `nS`.
+		
+		ValueError
+			If `corr_coeff` is not 'Pearson' or 'Spearman'.
+
+		ValueError
+			If `fraction_present` is not between 0 and 1.
 
 		See Also
 		--------
+		plot_difference_vk
+			Function for plotting presence/absense differences between two
+			samples.
 
+		plot_sample_vk
+			Function for plotting a van Krevelen diagram for a single sample,
+			color coded either by peak intensity or by compound class.
+		
 		References
 		----------
+		
 		'''
+
+		#ensure that env_param is in the right format
+		s = type(env_param).__name__
+		l = len(env_param)
+
+		if s not in ['list', 'ndarray', 'Series']:
+			raise TypeError(
+				'env_param is type %r. Must be list, np.ndarray, or pd.Series'
+				% s)
+
+		elif len(env_param) != self.nS:
+			raise LengthError(
+				'env_param is length %r, must be length %r.' % (l, self.nS))
+
+
+		#ensure corr_coeff is in the right format
+		if corr_coeff not in ['pearson', 'Pearson', 'spearman', 'Spearman']:
+			raise ValueError(
+				'corr_coeff %r not recognized. Must be "Pearson" or "Spearman'
+				% corr_coeff)
+
+		#ensure fraction_present between 0 and 1
+		if fraction_present < 0 or fraction_present > 1:
+			raise ValueError(
+				'fraction_present value of %r is outside of possbile bounds!'
+				' must be between 0 and 1' % fraction_present)
+
+		#make axis if necessary
+		if ax is None:
+			fig, ax = plt.subplots(1,1)
+
+		#set axis labels and title
+		title = 'Environmental correlations (' + corr_coeff + \
+			', fraction samples present = ' + fraction_present
+		
+		ax.set_title(title)
+		ax.set_ylabel('H/C')
+		ax.set_xlabel('O/C')
+
+		#extract indices of peaks present in all samples
+		ind = self.intensities[
+			(self.intensities > 0).sum(axis = 1) >=
+			fraction_present * self.nS].index
+
+		#store number of retained formulae
+		nRet = len(ind)
+
+		#calculate correlations and only keep significantly correlated forms
+		if corr_coeff in ['Pearson', 'pearson']:
+			
+			ind_sig, rhos, pvals = _calc_pearson(
+				self.intensities, 
+				ind, 
+				env_param)
+
+		elif corr_coeff in ['Spearman', 'spearman']:
+
+			ind_sig, rhos, pvals = _calc_spearman(
+				self.intensities, 
+				ind, 
+				env_param)
+
+
+
 
 
 
