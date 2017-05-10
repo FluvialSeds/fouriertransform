@@ -38,7 +38,7 @@ Documentation
 -------------
 The documentation for the latest release, including detailed package references as well as a comprehensive walkthrough for analyzing FT-ICR MS data, is available at:
 
-	http://fouriertransform.readthedocs.io (**to be added later**)
+	http://fouriertransform.readthedocs.io/
 
 Package features
 ----------------
