@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the FourierTransform documentation!
-==============================================
+Welcome to the FourierTransform documentation
+=============================================
 
 ``fouriertransform`` is a Python package for analyzing Fourier Transform Ion Cyclotron Resonance Mass Spectrometry (FT-ICR MS) data. ``fouriertransform`` is especially suited for assigning formulae raw MS peaks, categorizing formulae into compound classes according to elemental formula, and creating statistical correlations with environmental parameters.
 
