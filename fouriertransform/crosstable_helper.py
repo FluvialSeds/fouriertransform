@@ -688,6 +688,9 @@ def _combine_EO_samples(dir_path, file_names):
 	if file_names == 'all':
 		file_names = next(os.walk(dir_path))[2]
 
+		#only keep .csv files!
+		file_names = [f for f in file_names if '.csv' in f]
+
 	#combine dir_name and name to make absolute paths
 	path_names = [dir_path + '/' + s for s in file_names]
 

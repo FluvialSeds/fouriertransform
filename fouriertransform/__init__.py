@@ -15,7 +15,7 @@ documentation can be found at:
 
 	http://fouriertransform.readthedocs.io
 
-Version 0.0.1 is current as of 2 May 2017.
+Version 0.0.1 is current as of 10 May 2017.
 
 '''
 
