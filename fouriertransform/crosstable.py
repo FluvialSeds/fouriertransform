@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import warnings
 
-
 #import exceptions
 from .exceptions import(
 	FormulaError,
@@ -35,33 +34,182 @@ class CrossTable(object):
 
 	Parameters
 	----------
+	intensities : 2D array-like
+		Either 2D np.ndarray or pd.Dataframe of all formula intensities for
+		all samples.
+
+	formulae : list
+		List of formula names. If `None`, pulls formula names from 
+		`intensities` index values. Defaults to `None`.
+
+	rescale : `None` or str
+		String telling the method how to rescale peak intensities, either
+		'fraction', 'max_peak', or None. If 'fraction', scales intensities such
+		that the sum for *each sample* is equal to 100. If 'max_peak', scales
+		intensities such that the largest peak *in the entire sample set* is
+		equal to 100.
+
+	sam_names : `None` or list
+		List of sample names. If `None`, pulls sample names from column names
+		of `intensities`. Defaults to `None`.
 
 	Warnings
 	--------
+	UserWarning
+		If `sam_names` = `None` and `intensities` does not contain sample
+		names, then names each sample according to column number.
 
 	Notes
 	-----
+	When calculating correlation van Krevelen plots, `CrossTable` scaling
+	should be set to 'fraction'. This way, it is the relative abundance within
+	a given sample that is correlated with environmental parameters.
 
 	References
 	----------
-	Koch and Dittmar (2006), Rapid Comm. Mass. Spec., 20, 926-932.
-
-	Santi-Temkiv et al. (2013), PLoS One, doi:10.1371/journal.pone.0053550.
-
 	EnviroOrg_ software, National High Magnetic Field Laboratory,
 	Tallahassee, FL.
 
-	Legendre and Legendre (2012), Numerical Ecology, Elsevier, 2nd Ed.
+	Koch and Dittmar (2006), Rapid Comm. Mass. Spec., 20, 926-932.
 
 	LaRowe and van Cappellen (2011), Geochim. Cosmochim. Ac., 67, 2030-2042.
 
-	.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
+	Legendre and Legendre (2012), Numerical Ecology, Elsevier, 2nd Ed.
 
-	See Also
-	--------
+	Santi-Temkiv et al. (2013), PLoS One, doi:10.1371/journal.pone.0053550.
+
+	.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
 
 	Examples
 	--------
+	Generating an arbitrary bare-bones cross table containing made-up
+	formulae::
+
+		#import modules
+		import fouriertransform as ft
+		import numpy as np
+		import pandas as pd
+
+		#generate arbitrary data
+		intensities = np.ones([2,2])
+		formulae = ['C1H1O1N0S0P0', 'C2H2O1N0S1P0']
+		sam_names = ['sample_1','sample_2']
+
+		#create crosstable
+		ct = ft.CrossTable(
+			intensities,
+			formulae = formulae,
+			rescale = None,
+			sam_names = sam_names)
+
+	Importing all EnviroOrg files contained within a directory and combining
+	to for a cross table::
+
+		#input directory name
+		dir_name = '~/Desktop/EO_directory'
+
+		#create crosstable
+		ct = ft.CrossTable.from_eo(
+			dir_name,
+			file_names = 'all', #can replace with list of names for subset
+			rescale = 'fraction')
+
+	Generating a summary table for the samples contained within the
+	``CrossTable`` instance `ct`::
+
+		#make the summary table
+		sum_tab = ct.generate_summary()
+
+		#save as csv
+		sum_tab.to_csv('~/Desktop/summary_table.csv')
+
+	Plotting the cross table data in van Krevelen space. You can plot either
+	intensities or class for a single sample, the difference between two
+	samples, or correlations between relative intensities across all samples
+	and some other environmental parameter (e.g. bulk carbon isotopes). For
+	all plotting methods, matplotlib scatterplot keyword arguments can be
+	used.
+
+	Plotting a single sample's intensity. Here, I'm taking the log of
+	intensities to see a wider dynamic range::
+
+		#import additional modules
+		import matplotlib.pyplot as plt
+
+		#extract sample name
+		s = 'sample_1'
+
+		#make axis
+		fig, ax = plt.subplots(1,1)
+
+		#make van krevelen plot
+		ax = ct.plot_sample_vk(
+			s,
+			ax = ax,
+			plot_type = 'intensity',
+			log = True,
+			edgecolor = 'w',
+			s = 40,
+			cmap = 'YlGnBu')
+
+	Plotting compounds by class for a single sample::
+
+		#make axis
+		fig, ax = plt.subplots(1,1)
+
+		#make van krevelen plot
+		ax = ct.plot_sample_vk(
+			s,
+			ax = ax
+			plot_type = 'class',
+			edgecolor = 'w',
+			s = 40)
+
+	Plotting the difference between two samples. Formulae that are present
+	in 'sample_1' but not present in 'sample_2' will be plotted and color
+	coded according to class::
+
+		#extract second sample name
+		s2 = 'sample_2'
+
+		#make axis
+		fig, ax = plt.subplots(1,1)
+
+		#make van krevelen plot
+		ax = ct.plot_difference_vk(
+			s,
+			s2,
+			ax = ax,
+			edgecolor = 'w',
+			s = 40)
+
+	Plotting correlations with some independently measured environmental
+	parameter, here called `env_param`. You can either plot correlations as
+	Pearson or Spearman coefficients, and you can decide what fraction of
+	the total samples a formula must be contained in in order to be considered
+	for correlation. You can also determine the significance cutoff (alpha).
+	Resulting plot only retains statistically significant formulae. 
+	An example::
+
+		#make axis
+		fig, ax = plt.subplots(1,1)
+
+		#make van krevelen plot
+		ax = ct.plot_correlation_vk(
+			env_param,
+			ax = ax,
+			corr_type = 'Spearman',
+			f = 1,
+			alpha = 0.05,
+			edgecolor = 'w',
+			s = 40,
+			cmap = 'coolwarm',
+			vmin = -1,
+			vmax = 1)	
+
+	Any figure can then be saved to the drive according to::
+
+		fig.savefig('~/Desktop/van_krevelen_figure.pdf')
 
 	**Attributes**
 
@@ -84,7 +232,11 @@ class CrossTable(object):
 
 	formulae : list
 		List of strings containing each molecular formula, in the format:
-		C(1-45)H(1-92)O(1-25)N(0-4)S(0-2). Length `nF`.
+		C(1-99)H(1-99)O(1-99)N(0-9)S(0-9)P(0-9). Length `nF`.
+
+	intensities : pd.DataFrame
+		DataFrame containing the MS intensities of each formula within each 
+		sample. Shape [`nF` x `nS`].
 
 	nF : int
 		Number of total detected formulae in dataset.
@@ -98,15 +250,6 @@ class CrossTable(object):
 
 	sam_names : list
 		List of strings containing each sample name. Length `nS`.
-
-	intensities : pd.DataFrame
-		DataFrame containing the MS intensities of each formula within each 
-		sample. Shape [`nF` x `nS`].
-
-	_chem_comp : pd.DataFrame
-		Protected attribute. Dataframe of number of each atom contained in
-		each formula (delete this text later, for my bookkeeping only.)
-
 	'''
 
 	def __init__(
