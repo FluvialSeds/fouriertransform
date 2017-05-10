@@ -840,7 +840,7 @@ class CrossTable(object):
 		sig = rhos[ind_sig].abs().std()
 
 		pct_sig = 100*nSig / nRet
-		l1 = r'$n_{sig}$ = %.0f (%.1f %% of total forms); ' % (nSig, pct_sig)
+		l1 = r'$n_{sig}$ = %.0f (%.1f %%); ' % (nSig, pct_sig)
 		l2 = r'$\mu_{\| \rho \|}$ = %.2f; ' % mu
 		l3 = r'$\sigma_{\| \rho \|}$ = %.2f' % sig
 		text = l1 + l2 + l3
