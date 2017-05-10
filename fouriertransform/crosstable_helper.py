@@ -13,6 +13,7 @@ __all__ = [
 	'_calc_category',
 	'_calc_class',
 	'_calc_mass',
+	'_calc_NOSC',
 	'_calc_pct',
 	'_calc_corr',
 	'_check_forms',
@@ -367,6 +368,40 @@ def _calc_mass(ct):
 		30.97*df['P']
 
 	return cmass
+
+#define function to calculate modified aromaticity index
+def _calc_NOSC(ct):
+	'''
+	Calculates the nominal oxidation state of carbon for each formula contained
+	within a ``CrossTable`` instance.
+
+	Parameters
+	----------
+	ct : ft.CrossTable
+		``CrossTable`` instance containing the formulae of interest.
+
+	Returns
+	-------
+	NOSC : pd.Series
+		Series of the resulting NOSC values. Length `nF`.
+
+	References
+	----------
+	LaRowe and van Cappellen (2011), Geochim. Cosmochim. Ac., 67, 2030-2042.
+	'''
+
+	#extract chemical compositions, name df for shorthand
+	df = ct._chem_comp
+
+	#calculate NOSC (assume z is zero)
+	z = 0
+	num = 4*df['C'] + df['H'] - 2*df['O'] - 3*df['N'] - 2*df['S'] + 5*df['P'] - z
+	NOSC = 4 - num/df['C']
+
+	#name it
+	NOSC.name = 'NOSC'
+
+	return NOSC
 
 #define a function to calculate percentages for summary table
 def _calc_pct(ct, cols, weights):
@@ -766,8 +801,10 @@ def _gen_sum_tab(ct):
 	#make list of additional variables to summarize
 	mets = [
 		'Tot_N_formulae',
-		'Tot_AveMass_N',
-		'Tot_AveMass_RA'
+		'AveMass_N',
+		'AveMass_RA',
+		'NOSC_N',
+		'NOSC_RA'
 		]
 
 	#concatenate everything into columns list
@@ -784,11 +821,17 @@ def _gen_sum_tab(ct):
 
 	sum_df['Tot_N_formulae'] = tot_N
 
-	sum_df['Tot_AveMass_N'] = \
+	sum_df['AveMass_N'] = \
 		np.sum(exists.multiply(ct.cmpd_mass, axis = 0))/tot_N
 
-	sum_df['Tot_AveMass_RA'] = \
+	sum_df['AveMass_RA'] = \
 		np.sum(ct.intensities.multiply(ct.cmpd_mass, axis = 0))/tot_int
+
+	sum_df['NOSC_N'] = \
+		np.sum(exists.multiply(ct.NOSC, axis = 0))/tot_N
+
+	sum_df['NOSC_RA'] = \
+		np.sum(ct.intensities.multiply(ct.NOSC, axis = 0))/tot_int
 
 	sum_df[cls_mets] = _calc_pct(ct, cls_mets, ct.cmpd_class)
 	sum_df[cat_mets] = _calc_pct(ct, cat_mets, ct.cmpd_cat)

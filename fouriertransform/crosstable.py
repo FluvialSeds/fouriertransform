@@ -2,9 +2,6 @@
 This module contains the CrossTable class.
 '''
 
-#TODO: ADD NOSC TO SUMMARY TABLE!
-#TODO: ADD DBE TO SUMMARY TABLE!
-
 from __future__ import(
 	division,
 	print_function,
@@ -56,6 +53,8 @@ class CrossTable(object):
 
 	Legendre and Legendre (2012), Numerical Ecology, Elsevier, 2nd Ed.
 
+	LaRowe and van Cappellen (2011), Geochim. Cosmochim. Ac., 67, 2030-2042.
+
 	.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
 
 	See Also
@@ -89,6 +88,10 @@ class CrossTable(object):
 
 	nF : int
 		Number of total detected formulae in dataset.
+
+	NOSC : pd.Series
+		Series of the nominal oxidation state of carbon (NOSC) for each formula,
+		with index as formula composition. Length `nS`.
 
 	nS : int
 		Number of samples in dataset.
@@ -125,7 +128,7 @@ class CrossTable(object):
 		#rescale intensities if necessary
 		if rescale in ['fraction', 'Fraction']:
 			m = ints.sum()
-			ints = ints/m
+			ints = 100*ints/m
 
 		elif rescale in ['max_peak', 'Max_peak', 'Max_Peak']:
 			m = ints.max().max()
@@ -146,9 +149,10 @@ class CrossTable(object):
 		#generate a chemical composition table
 		self._chem_comp = _gen_chem_comp(forms)
 
-		#calculate compound mass, category, class, and AImod
+		#calculate compound mass, category, class, NOSC, and AImod
 		self.cmpd_mass = _calc_mass(self)
 		self.AImod = _calc_AImod(self)
+		self.NOSC = _calc_NOSC(self)
 		self.cmpd_class = _calc_class(self)
 		self.cmpd_cat = _calc_category(self)
 
@@ -517,7 +521,7 @@ class CrossTable(object):
 		ax = None, 
 		alpha = 0.05,
 		f = 1.0,
-		corr_type = 'Spearman',
+		corr_type = 'Pearson',
 		**kwargs):
 		'''
 		Method for generating a van Krevelen plot to compare individual
@@ -662,7 +666,7 @@ class CrossTable(object):
 
 		#calculate correlations and only keep significantly correlated forms
 		ind_sig, rhos, pvals = _calc_corr(
-			ints, 
+			ints.ix[ind], 
 			env_param, 
 			alpha = alpha,
 			corr_type = corr_type)
@@ -675,8 +679,8 @@ class CrossTable(object):
 		ind_sort = np.argsort(c)
 
 		#calculate H/C and O/C
-		HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
-		OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
+		HC = self._chem_comp.loc[ind_sig,'H']/self._chem_comp.loc[ind_sig,'C']
+		OC = self._chem_comp.loc[ind_sig,'O']/self._chem_comp.loc[ind_sig,'C']
 
 		#plot results
 		vk = ax.scatter(
@@ -693,16 +697,15 @@ class CrossTable(object):
 		sig = rhos[ind_sig].abs().std()
 
 		pct_sig = 100*nSig / nRet
-		l1 = r'$n_{sig}$ = %.0f (%.1f \% of total forms) \n' % (nSig, pct_sig)
-		l2 = r'$\mu_{\| \rho \|}$ = %.2f \n' % mu
+		l1 = r'$n_{sig}$ = %.0f (%.1f %% of total forms); ' % (nSig, pct_sig)
+		l2 = r'$\mu_{\| \rho \|}$ = %.2f; ' % mu
 		l3 = r'$\sigma_{\| \rho \|}$ = %.2f' % sig
 		text = l1 + l2 + l3
 
 		#make text
-		ax.text(0.05, 0.05, text,
+		ax.text(0.05, 0.95, text,
 			transform = ax.transAxes,
-			fontsize = 8,
 			horizontalalignment = 'left',
-			verticalalignment = 'bottom')
+			verticalalignment = 'top')
 
 		return ax
