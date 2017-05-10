@@ -14,8 +14,7 @@ __all__ = [
 	'_calc_class',
 	'_calc_mass',
 	'_calc_pct',
-	'_calc_pearson',
-	'_calc_spearman',
+	'_calc_corr',
 	'_check_forms',
 	'_check_int',
 	'_combine_EO_samples',
@@ -227,6 +226,120 @@ def _calc_class(ct):
 
 	return cclass
 
+#define a function to calculate pearson correlations and retain sig. forms.
+def _calc_corr(intensities, env_param, alpha = 0.05, corr_type = 'Pearson'):
+	'''
+	Calculates the correlation coefficients and retains statistically
+	significant compounds.
+
+	Parameters
+	----------
+	intensities : pd.DataFrame
+		Dataframe of peak intensities.
+
+	env_param : pd.Series
+		Series containing the values of a given environmental parameter to
+		correlate with.
+
+	alpha : float
+		Significance alpha value for retaining formulae.
+
+	corr_type : str
+		The type or correlation to calculate, either 'Pearson' or 'Spearman'.
+
+	Returns
+	-------
+	ind_sig : pd.Index
+		Index of the statistically significant formulae.
+
+	rhos : pd.Series
+		Series of the correlation coefficient values
+
+	pvals : pd.Series
+		Series of the correlation significance values.
+
+	Raises
+	------
+	LengthError
+		If number of samples is less than 3.
+
+	ValueError
+		If `corr_type` is not 'Pearson' or 'Spearman'.
+
+	TypeError
+		If `intensities` is not ``pd.DataFrame``.
+
+	TypeError
+		If `env_param` is not ``pd.Series``.
+
+	TypeError
+		If `alpha` is not float between 0 and 1.
+
+	SampleError
+		If sample names in `env_param` and `intensities` do not match.
+	'''
+
+	#check formats and values
+	itype = type(intensities).__name__
+	etype = type(env_param).__name__
+
+	if itype != 'DataFrame':
+		raise TypeError(
+			'intensities is currently type %r. Must be pd.DataFrame!' % itype)
+
+	elif etype != 'Series':
+		raise TypeError(
+			'env_param is currently type %r. Must be pd.Series!' % itype)
+	
+	elif type(alpha) is not float or alpha > 1 or alpha < 0:
+		raise TypeError(
+			'alpha must be float between 0 and 1')
+
+	elif (env_param.index != intensities.columns).any():
+		raise SampleError(
+			'sample names in env_param must match those in intensities.')
+
+	#extract constants and raise error of <= 2 samples
+	nS = len(env_param)
+
+	if nS < 3:
+		raise LengthError(
+			'Must contain >= 3 samples to calculate correlations! Currently'
+			' trying to correlate for %r samples' % nS)
+
+	#rank transform if Spearman, rename to X and Y
+	if corr_type in ['spearman', 'Spearman']:
+		X = intensities.rank(axis = 1)
+		Y = env_param.rank()
+
+	elif corr_type in ['pearson', 'Pearson']:
+		X = intensities
+		Y = env_param
+
+	else:
+		raise ValueError(
+			'Correlation of type %r not recognized. Must be "Pearson" or'
+			' "Spearman"' % corr_type)
+
+	#calculate rho
+	num = np.mean(X*Y, axis = 1) - np.mean(X, axis = 1)*np.mean(Y)
+	denom = (np.mean(X**2, axis = 1) - np.mean(X, axis = 1)**2)**0.5 * \
+		(np.mean(Y**2) - np.mean(Y)**2)**0.5
+
+	#store rho values
+	rhos = num / denom
+
+	#calculate t scores
+	t = rhos / ((1 - rhos**2)/(nS - 2))**0.5
+	p = 2*(1-stats.t.cdf(np.abs(t),nS-2))
+
+	pvals = pd.Series(p, index = rhos.index)
+
+	#calculate indices of statistically significant formulae
+	ind_sig = pvals[pvals <= alpha].index
+
+	return ind_sig, rhos, pvals
+
 #define a function to calculate the mass of each compound
 def _calc_mass(ct):
 	'''
@@ -323,103 +436,6 @@ def _calc_pct(ct, cols, weights):
 		' Something is not assigned a compound class / category!'
 
 	return pcts
-
-#define a function to calculate pearson correlations and retain sig. forms.
-def _calc_pearson(intensities, env_param):
-	'''
-	Calculates the Pearson correlation coefficients and retains statistically
-	significant compounds (p <= 0.05).
-
-	Parameters
-	----------
-	intensities : pd.DataFrame
-		Dataframe of peak intensities for a given ``CrossTable`` instance.
-
-	env_param : list, array, or series
-		List-like, contains the values of a given environmental parameter to
-		correlate with.
-
-	Returns
-	-------
-	ind_sig : pd.Index
-		Index of the statistically significant formulae.
-
-	rhos : pd.Series
-		Series of the correlation coefficient values
-
-	pvals : pd.Series
-		Series of the correlation significance values.
-	'''
-
-	#get into pandas format
-	X = pd.DataFrame(intensities)
-	Y = pd.Series(env_param, index = X.columns)
-	nS = len(env_param)
-
-	#calculate rho
-	num = np.mean(X*Y, axis = 1) - np.mean(X, axis = 1)*np.mean(Y)
-	denom = (np.mean(X**2, axis = 1) - np.mean(X, axis = 1)**2)**0.5 * \
-		(np.mean(Y**2) - np.mean(Y)**2)**0.5
-
-	#store rho values
-	rhos = num / denom
-
-	# #calculate z scores
-	# z = np.arctanh(rhos)*(nS - 3)**0.5
-
-	# #calculate two-sided pvals from z test
-	# pvals = 2*(1 - stats.norm.cdf(np.abs(z)))
-
-	#calculate t scores
-	t = rhos / ((1 - rhos**2)/(nS - 2))**0.5
-	p = 2*(1-stats.t.cdf(np.abs(t),nS-2))
-
-	pvals = pd.Series(p, index = rhos.index)
-
-
-	return rhos, pvals
-
-#define a function to calculate spearman correlations and retain sig. forms.
-def _calc_spearman(intensities, ind, env_param):
-	'''
-	Calculates the Spearman correlation coefficients and retains statistically
-	significant compounds (p <= 0.05).
-
-	Parameters
-	----------
-	intensities : pd.DataFrame
-		Dataframe of peak intensities for a given ``CrossTable`` instance.
-
-	env_param : list, array, or series
-		List-like, contains the values of a given environmental parameter to
-		correlate with.
-
-	Returns
-	-------
-	ind_sig : pd.Index
-		Index of the statistically significant formulae.
-
-	rhos : pd.Series
-		Series of the correlation coefficient values
-
-	pvals : pd.Series
-		Series of the correlation significance values.
-	'''
-
-	#pre-allocate
-	rhos = pd.Series(index = ind, name = 'rho_vals')
-	pvals = pd.Series(index = ind, name = 'p_vals')
-
-	#loop through each formula and store
-	for i in ind:
-		rhos.ix[i], pvals.ix[i] = spearmanr(intensities.ix[i], env_param)
-
-	#calculate significant indices and only retain those formulae
-	ind_sig = pvals[pvals <= 0.05].index
-	rhos = rhos[ind_sig]
-	pvals = pvals[ind_sig]
-
-	return ind_sig, rhos, pvals
 
 #define a function to check formulae format
 def _check_forms(formulae):
@@ -873,15 +889,3 @@ def _input_EO_sample(file, sam_name, norm = False):
 		sam_int = sam_int/sam_int.sum()
 
 	return sam_int
-
-
-
-
-
-
-
-
-
-
-
-

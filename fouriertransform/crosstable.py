@@ -54,6 +54,8 @@ class CrossTable(object):
 	EnviroOrg_ software, National High Magnetic Field Laboratory,
 	Tallahassee, FL.
 
+	Legendre and Legendre (2012), Numerical Ecology, Elsevier, 2nd Ed.
+
 	.. _EnviroOrg: https://nationalmaglab.org/user-facilities/icr/icr-software
 
 	See Also
@@ -306,11 +308,6 @@ class CrossTable(object):
 				'Sample name %r is not contained within the CrossTable!' 
 				% sam_name)
 
-		if plot_type not in ['class','Class','intensity','Intensity']:
-			raise ValueError(
-				'Plot type %r not recognized, must be "class" or "intensity"'
-				% plot_type)
-
 		#make axis if necessary
 		if ax is None:
 			fig, ax = plt.subplots(1,1)
@@ -351,7 +348,7 @@ class CrossTable(object):
 			cbar = fig.colorbar(vk, label = lab)
 
 		#if plot type is 'class', extract classes and plot
-		else:
+		elif plot_type in ['class', 'Class']:
 			#extract all unique classes
 			ccls = self.cmpd_class.unique()
 			classes = self.cmpd_class[ind]
@@ -385,6 +382,12 @@ class CrossTable(object):
 				scatterpoints = 1,
 				markerscale = 2,
 				fontsize = 'small')
+
+		#raise error if type is not class of intensity
+		else:
+			raise ValueError(
+				'Plot type %r not recognized, must be "class" or "intensity"'
+				% plot_type)
 
 		return ax
 
@@ -512,16 +515,13 @@ class CrossTable(object):
 		self,
 		env_param, 
 		ax = None, 
-		fraction_present = 1.0,
-		corr_coeff = 'Spearman',
+		alpha = 0.05,
+		f = 1.0,
+		corr_type = 'Spearman',
 		**kwargs):
 		'''
-
-		#TODO: ALLOW FOR MISSING SAMPLES! ADD missing = 'drop' OPTION
-		#TODO: FASTER SPEARMAN CALCULATION???
-
 		Method for generating a van Krevelen plot to compare individual
-		formula relative abundances against environmental parameters of
+		formula relative abundances against environmental parameters of 
 		interest. Can handle peaks that are only present in a subset of
 		samples and can correlate using a range of statistical methods.
 
@@ -529,18 +529,28 @@ class CrossTable(object):
 		----------
 		env_param : list, array, or pd.Series
 			List, array, or series of values for a particular environmental 
-			variable. If list, assumes values are in the same order as sample 
-			names in the ``CrossTable`` instance. Length `nS`.
+			variable. If list or array, assumes values are in the same order 
+			as sample names in the ``CrossTable`` instance. Length `nS`. If
+			Series with sample names as index, only considers samples present
+			in the index for correlation (i.e. can handle missing samples).
+			Samples with NaN values will also be dropped.
 
 		ax : None or plt.axis
-			Axis to plot on. If `None`, creates an axis.
+			Axis to plot on. If `None`, creates an axis. Defaults to `None`.
 
-		fraction_present : float
+		alpha : float
+			The significance value to use for retaining statistically
+			significant formulae for plotting, must be between 0 and 1. 
+			Defaults to `0.05`.
+
+		f : float
 			The fraction of total samples in which a formula must be present
 			in order to be considered for correlation, ranging between 0.0
-			and 1.0.
+			and 1.0. If some samples are missing env_param data, then f is the
+			fraction of retained samples in which a formula must be present.
+			Defaults to 1.
 
-		corr_coeff : str
+		corr_type : str
 			String saying which statistical method to use for correlation.
 			Currently accepts:
 
@@ -555,16 +565,32 @@ class CrossTable(object):
 		Raises
 		------
 		TypeError
-			If `env_param` is list, np.ndarray, or pd.Series.
+			If `env_param` is not list, np.ndarray, or pd.Series.
 
 		LengthError
-			If `env_param` is not of length `nS`.
-		
-		ValueError
-			If `corr_coeff` is not 'Pearson' or 'Spearman'.
+			If `env_param` is not of length `nS` (if list or array only).
 
 		ValueError
 			If `fraction_present` is not between 0 and 1.
+
+		LengthError
+			If number of samples is less than 3.
+
+		ValueError
+			If `corr_type` is not 'Pearson' or 'Spearman'.
+
+		TypeError
+			If `intensities` is not ``pd.DataFrame``.
+
+		TypeError
+			If `env_param` is not ``pd.Series``.
+
+		TypeError
+			If `alpha` is not float between 0 and 1.
+
+		SampleError
+			If sample names in `env_param` and `intensities` do not match.
+
 
 		See Also
 		--------
@@ -575,80 +601,108 @@ class CrossTable(object):
 		plot_sample_vk
 			Function for plotting a van Krevelen diagram for a single sample,
 			color coded either by peak intensity or by compound class.
-		
+
 		References
 		----------
+		Legendre and Legendre (2012), Numerical Ecology, Elsevier, 2nd Ed.
 		
 		'''
 
-		#ensure that env_param is in the right format
-		s = type(env_param).__name__
+		#ensure env_param is the right type
+		stype = type(env_param).__name__
 		l = len(env_param)
 
-		if s not in ['list', 'ndarray', 'Series']:
+		if stype == 'Series':
+			#drop missing values if they exist
+			env_param.dropna(inplace = True)
+
+		elif stype in ['list', 'ndarray']:
+			#ensure right length
+			if l != self.nS:
+				raise LengthError(
+					'when list or array, `env_param` must contain the same'
+					' number of samples as the ``CrossTable`` object.')
+
+			env_param = pd.Series(env_param, index = self.sam_names)
+
+		else:
 			raise TypeError(
 				'env_param is type %r. Must be list, np.ndarray, or pd.Series'
-				% s)
+				% s)	
 
-		elif len(env_param) != self.nS:
-			raise LengthError(
-				'env_param is length %r, must be length %r.' % (l, self.nS))
-
-
-		#ensure corr_coeff is in the right format
-		if corr_coeff not in ['pearson', 'Pearson', 'spearman', 'Spearman']:
+		#ensure fraction present between 0 and 1
+		if type(f) not in [float, int] or f < 0 or f > 1:
 			raise ValueError(
-				'corr_coeff %r not recognized. Must be "Pearson" or "Spearman'
-				% corr_coeff)
-
-		#ensure fraction_present between 0 and 1
-		if fraction_present < 0 or fraction_present > 1:
-			raise ValueError(
-				'fraction_present value of %r is outside of possbile bounds!'
-				' must be between 0 and 1' % fraction_present)
+				'f must be int or float between 0 and 1!')
 
 		#make axis if necessary
 		if ax is None:
 			fig, ax = plt.subplots(1,1)
 
 		#set axis labels and title
-		title = 'Environmental correlations (' + corr_coeff + \
-			', fraction samples present = ' + fraction_present
+		title = 'Environmental correlations (' + corr_type + \
+			', f = ' + str(f) + \
+			', alpha = ' + str(alpha) + ')'
 		
 		ax.set_title(title)
 		ax.set_ylabel('H/C')
 		ax.set_xlabel('O/C')
 
-		#extract indices of peaks present in all samples
-		ind = self.intensities[
-			(self.intensities > 0).sum(axis = 1) >=
-			fraction_present * self.nS].index
+		#retain only intensities from samples that exist in env_param
+		# i.e. drop missing samples
+		sams = env_param.index
+		ints = self.intensities[sams]
+		nS = len(sams)
+
+		#extract indices of peaks present in >= f fraction of samples
+		ind = ints[(ints > 0).sum(axis = 1) >= f * nS].index
 
 		#store number of retained formulae
 		nRet = len(ind)
 
 		#calculate correlations and only keep significantly correlated forms
-		if corr_coeff in ['Pearson', 'pearson']:
-			
-			ind_sig, rhos, pvals = _calc_pearson(
-				self.intensities, 
-				ind, 
-				env_param)
+		ind_sig, rhos, pvals = _calc_corr(
+			ints, 
+			env_param, 
+			alpha = alpha,
+			corr_type = corr_type)
 
-		elif corr_coeff in ['Spearman', 'spearman']:
+		nSig = len(ind_sig)
 
-			ind_sig, rhos, pvals = _calc_spearman(
-				self.intensities, 
-				ind, 
-				env_param)
+		#retain significant formulae and sort by ascending rho
+		c = rhos[ind_sig]
+		lab = corr_type + 'corr. coef.'
+		ind_sort = np.argsort(c)
 
+		#calculate H/C and O/C
+		HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
+		OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
 
+		#plot results
+		vk = ax.scatter(
+			OC[ind_sort], 
+			HC[ind_sort], 
+			c = c[ind_sort].values, 
+			**kwargs)
 
+		#add colorbar
+		cbar = fig.colorbar(vk, label = lab)
 
+		#calculate summary statistics and plot as text
+		mu = rhos[ind_sig].abs().mean()
+		sig = rhos[ind_sig].abs().std()
 
+		pct_sig = 100*nSig / nRet
+		l1 = r'$n_{sig}$ = %.0f (%.1f \% of total forms) \n' % (nSig, pct_sig)
+		l2 = r'$\mu_{\| \rho \|}$ = %.2f \n' % mu
+		l3 = r'$\sigma_{\| \rho \|}$ = %.2f' % sig
+		text = l1 + l2 + l3
 
+		#make text
+		ax.text(0.05, 0.05, text,
+			transform = ax.transAxes,
+			fontsize = 8,
+			horizontalalignment = 'left',
+			verticalalignment = 'bottom')
 
-
-
-
-
+		return ax
