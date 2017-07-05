@@ -65,8 +65,10 @@ def _calc_AImod(ct):
 	#extract chemical compositions, name df for shorthand
 	df = ct._chem_comp
 
+	#UPDATED TO INCLUDE NITROGEN!
 	#calculate DBEai
-	DBEai = 1 + df['C'] - 0.5*df['O'] - df['S'] - 0.5*df['H']
+	#DBEai = 1 + df['C'] - 0.5*df['O'] - df['S'] - 0.5*df['H'] - 0.5*df['N']
+	DBEai = 1 + df['C'] - df['S'] - 0.5*(df['O'] + df['H'] + df['N'])
 
 	#calculate Cai
 	Cai = df['C'] - 0.5*df['O'] - df['N'] - df['S'] - df['P']
@@ -127,10 +129,56 @@ def _calc_category(ct):
 
 	#calculate indices for each category
 
+	# #aliphatic, high OC
+	# ah_ind = df[
+	# 	(df['H'] >= 1.5*df['C']) & 
+	# 	(df['O'] >= 0.5*df['C']) &
+	# 	(df['N'] == 0)].index
+
+	# #aliphatic, low OC
+	# al_ind = df[
+	# 	(df['H'] >= 1.5*df['C']) & 
+	# 	(df['O'] < 0.5*df['C']) &
+	# 	(df['N'] == 0)].index
+
+	# #condensed aromatic
+	# ca_ind = df[(
+	# 	df['AImod'] >= 0.67)].index
+
+	# #polyphenolic, high OC
+	# ph_ind = df[
+	# 	(df['AImod'] < 0.67) & 
+	# 	(df['AImod'] >= 0.5) & 
+	# 	(df['O'] >= 0.5*df['C'])].index
+
+	# #polyphenolic, low OC
+	# pl_ind = df[
+	# 	(df['AImod'] < 0.67) & 
+	# 	(df['AImod'] >= 0.5) & 
+	# 	(df['O'] < 0.5*df['C'])].index
+
+	# #unsaturatied and phenolic, high OC
+	# uh_ind = df[
+	# 	(df['AImod'] < 0.5) & 
+	# 	(df['H'] < 1.5*df['C']) & 
+	# 	(df['O'] >= 0.5*df['C'])].index
+
+	# #unsaturatied and phenolic, low OC
+	# ul_ind = df[
+	# 	(df['AImod'] < 0.5) & 
+	# 	(df['H'] < 1.5*df['C']) & 
+	# 	(df['O'] < 0.5*df['C'])].index
+
+	# #peptide-like
+	# pe_ind = df[
+	# 	(df['H'] >= 1.5*df['C']) & 
+	# 	(df['N'] > 0)].index
+
 	#aliphatic, high OC
 	ah_ind = df[
 		(df['H'] >= 1.5*df['C']) & 
 		(df['O'] >= 0.5*df['C']) &
+		(df['O'] <= 0.9*df['C']) &
 		(df['N'] == 0)].index
 
 	#aliphatic, low OC
@@ -140,43 +188,65 @@ def _calc_category(ct):
 		(df['N'] == 0)].index
 
 	#condensed aromatic
-	ca_ind = df[(
-		df['AImod'] >= 0.67)].index
+	ca_ind = df[
+		(df['AImod'] > 0.66) &
+		(df['N'] + df['S'] == 0) & 
+		(df['O'] <= 0.9*df['C'])].index
+
+	#condensed aromatic with S or N
+	cx_ind = df[
+		(df['AImod'] > 0.66) &
+		(df['N'] + df['S'] > 0) & 
+		(df['O'] <= 0.9*df['C'])].index
 
 	#polyphenolic, high OC
 	ph_ind = df[
-		(df['AImod'] < 0.67) & 
-		(df['AImod'] >= 0.5) & 
-		(df['O'] >= 0.5*df['C'])].index
+		(df['AImod'] <= 0.66) & 
+		(df['AImod'] > 0.5) & 
+		(df['O'] >= 0.5*df['C']) &
+		(df['O'] <= 0.9*df['C'])].index
 
 	#polyphenolic, low OC
 	pl_ind = df[
-		(df['AImod'] < 0.67) & 
-		(df['AImod'] >= 0.5) & 
+		(df['AImod'] <= 0.66) & 
+		(df['AImod'] > 0.5) & 
 		(df['O'] < 0.5*df['C'])].index
 
 	#unsaturatied and phenolic, high OC
 	uh_ind = df[
-		(df['AImod'] < 0.5) & 
+		(df['AImod'] <= 0.5) & 
 		(df['H'] < 1.5*df['C']) & 
-		(df['O'] >= 0.5*df['C'])].index
+		(df['O'] >= 0.5*df['C']) &
+		(df['O'] <= 0.9*df['C'])].index
 
 	#unsaturatied and phenolic, low OC
 	ul_ind = df[
-		(df['AImod'] < 0.5) & 
+		(df['AImod'] <= 0.5) & 
 		(df['H'] < 1.5*df['C']) & 
 		(df['O'] < 0.5*df['C'])].index
 
 	#peptide-like
 	pe_ind = df[
 		(df['H'] >= 1.5*df['C']) & 
-		(df['N'] > 0)].index
+		(df['N'] > 0) &
+		(df['O'] <= 0.9*df['C'])].index
+
+	#sugars
+	su_ind = df[
+		(df['O'] > 0.9*df['C']) &
+		(df['N'] + df['S'] == 0)].index
+
+	#sugars with S or N
+	sx_ind = df[
+		(df['O'] > 0.9*df['C']) &
+		(df['N'] + df['S'] > 0)].index
 
 	#set values for compounds
 	ccat[ah_ind] = 'aliphatic_highOC'
 	ccat[al_ind] = 'aliphatic_lowOC'
 
 	ccat[ca_ind] = 'condensed_aromatic'
+	ccat[cx_ind] = 'condensed_aromatic_X'
 	
 	ccat[ph_ind] = 'polyphenolic_highOC'
 	ccat[pl_ind] = 'polyphenolic_lowOC'
@@ -185,6 +255,9 @@ def _calc_category(ct):
 	ccat[ul_ind] = 'unsaturated_phenolic_lowOC'
 
 	ccat[pe_ind] = 'peptide_like'
+
+	ccat[su_ind] = 'sugars'
+	ccat[sx_ind] = 'sugars_X'
 
 	return ccat
 
@@ -926,6 +999,9 @@ def _input_EO_sample(file, sam_name, norm = False):
 	form_names = df[fr].apply(lambda x: ''.join(x.astype('str')), axis = 1)
 	df.index = form_names
 	df.index.name = 'Formula'
+
+	#check for dupilicates and, if they exist, drop those rows
+	df = df[~df.index.duplicated(keep=False)]
 
 	#only retain necessary columns
 	sam_int = df[sam_name]
