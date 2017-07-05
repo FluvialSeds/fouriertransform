@@ -5,7 +5,7 @@ def readme():
 		return f.read()
 
 setup(name='fouriertransform',
-	version='0.0.1',
+	version='0.0.2',
 	description='FT-ICR MS peak assignment and data analysis',
 	long_description=readme(),
 	classifiers=[
@@ -20,7 +20,7 @@ setup(name='fouriertransform',
 		'Topic :: Scientific/Engineering'
 	],
 	url='https://github.com/FluvialSeds/fouriertransform',
-	download_url='https://github.com/FluvialSeds/fouriertransform/tarball/0.0.1',
+	download_url='https://github.com/FluvialSeds/fouriertransform/tarball/0.0.2',
 	keywords=[
 		'geochemistry',
 		'FT-ICR MS',

@@ -16,7 +16,7 @@ Basic runthrough::
 	import fouriertransform as ft
 
 	#generate string to path containing EnviroOrg data
-	dir_path = 'path_name'
+	dir_name = 'path_name'
 
 	#make the CrossTable instance
 	ct = ft.CrossTable.from_eo(
@@ -45,7 +45,7 @@ Basic runthrough::
 
 	#make van krevelen plot of classes
 	ax[1] = ct.plot_sample_vk(
-		'sample_name,
+		'sample_name',
 		ax = ax[1]
 		plot_type = 'class',
 		edgecolor = 'w',
