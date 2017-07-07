@@ -815,7 +815,11 @@ def _gen_chem_comp(formulae):
 		s = '((?<=' + atom + ')\d{1,2})'
 
 		#extract and store
-		chem_comp[atom] = chem_comp.index.str.extract(s).astype(int)
+		ccstr = chem_comp.index.str
+		chem_comp[atom] = ccstr.extract(s, expand = False).astype(int)
+
+
+		#chem_comp[atom] = chem_comp.index.str.extract(s, expand = False).astype(int)
 
 	#double check that all assignments are within bounds
 	mins = [1, 0, 0, 0, 0, 0]
