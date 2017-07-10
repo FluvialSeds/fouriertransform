@@ -38,6 +38,21 @@ class CrossTable(object):
 		Either 2D np.ndarray or pd.Dataframe of all formula intensities for
 		all samples.
 
+	drop_int_above : none, int, or float
+		Tells the method whether to drop formulae that represent greater
+		than some amount of the total intensity -- i.e. fliers. The value
+		of `drop_int_above` is the percent of total intensity (i.e. the
+		relative abundance) value above which peaks will be dropped.
+		Defaults to `None`.
+
+	drop_high_OC : Boolean
+		If `True`, formulae with O/C ratio above 1.0 will be dropped.
+		Defaults to `True`.
+
+	drop_high_HC : Boolean
+		If `True`, formulae with H/C ratio above 2.0 will be dropped.
+		Defaults to `True`.
+
 	formulae : list
 		List of formula names. If `None`, pulls formula names from 
 		`intensities` index values. Defaults to `None`.
@@ -112,7 +127,10 @@ class CrossTable(object):
 		ct = ft.CrossTable.from_eo(
 			dir_name,
 			file_names = 'all', #can replace with list of names for subset
-			rescale = 'fraction')
+			rescale = 'fraction',
+			drop_int_above = 5, #drops fliers above 5 pct total intensity
+			drop_high_HC = True, #drops peaks with H/C > 2
+			drop_high_OC = True) #drops peaks with O/C > 1
 
 	Generating a summary table for the samples contained within the
 	``CrossTable`` instance `ct`::
@@ -332,6 +350,21 @@ class CrossTable(object):
 			String containing the (absolute) path pointing to the directory
 			containing files to be imported.
 
+		drop_int_above : none, int, or float
+			Tells the method whether to drop formulae that represent greater
+			than some amount of the total intensity -- i.e. fliers. The value
+			of `drop_int_above` is the percent of total intensity (i.e. the
+			relative abundance) value above which peaks will be dropped.
+			Defaults to `None`.
+
+		drop_high_OC : Boolean
+			If `True`, formulae with O/C ratio above 1.0 will be dropped.
+			Defaults to `True`.
+
+		drop_high_HC : Boolean
+			If `True`, formulae with H/C ratio above 2.0 will be dropped.
+			Defaults to `True`.
+
 		file_names : str or list
 			Either a list of strings containing the filenames to be imported or
 			the string 'all'. If 'all', method will automatically import all 
@@ -356,6 +389,9 @@ class CrossTable(object):
 		ValueError
 			If the value for `rescale` is not 'fraction', 'max_peak', or 
 			`None`.
+
+		ValueError
+			If `drop_int_above` is not `None`, float, or int.
 
 		Notes
 		-----
