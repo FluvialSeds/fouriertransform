@@ -19,6 +19,7 @@ __all__ = [
 	'_check_forms',
 	'_check_int',
 	'_combine_EO_samples',
+	'_drop_forms',
 	'_gen_chem_comp',
 	'_gen_sum_tab',
 	'_input_EO_sample',
@@ -582,7 +583,10 @@ def _check_forms(formulae):
 				'Some inputted formulae are missing %r value!' % atom)
 
 #define a function to check intensity and sample name format
-def _check_int(intensities, formulae = None, sam_names = None):
+def _check_int(
+	intensities,
+	formulae = None, 
+	sam_names = None):
 	'''
 	Checks that inputted intensity table and sample names are in the correct
 	format.
@@ -608,10 +612,10 @@ def _check_int(intensities, formulae = None, sam_names = None):
 		as sample names.
 
 	forms : list
-		List of formula names. Length `nF`.
+		Array of formula names. Length `nF`.
 
 	sams : list
-		List of sampe names. Length `nS`.
+		Array of sampe names. Length `nS`.
 
 	Warnings
 	--------
@@ -720,7 +724,9 @@ def _check_int(intensities, formulae = None, sam_names = None):
 	return ints, forms, sams
 
 #define function to combine EnviroOrg samples into single dataframe
-def _combine_EO_samples(dir_path, file_names):
+def _combine_EO_samples(
+	dir_path, 
+	file_names):
 	'''
 	Generates an intensities table for multiple EnviroOrg files.
 
@@ -781,10 +787,103 @@ def _combine_EO_samples(dir_path, file_names):
 		#store
 		intensities = pd.concat([intensities, s_int], axis = 1)
 
-	#fill missing data with zeros and rescale so biggest peak = 100
+	#fill missing data with zeros
 	intensities.fillna(0, inplace = True)
 
 	return intensities
+
+#define function to drop high HC, high OC, or flier peaks
+def _drop_forms(
+	forms_all,
+	ints_all,
+	drop_int_above = None,
+	drop_high_HC = True,
+	drop_high_OC = True):
+	'''
+	Drops high HC, high OC, and flier formulae
+
+	Parameters
+	----------
+	forms_all : list
+		List of formula names. Length `nF + nDropped`.
+
+	ints_all : pd.DataFrame
+		DataFrame of intensities, with index as formula names and columns
+		as sample names.
+
+	Returns
+	-------
+	chem_comp : pd.DataFrame
+		Dataframe of chemical compositions after dropping, split into columns 
+		for `C`, `H`, `O`, `N`, `S`, and `P`. Shape [`nF` x 6].
+
+	forms : list
+		List of formula names after dropping. Length `nF`.
+
+	ints : pd.DataFrame
+		DataFrame of intensities after dropping, with index as formula names
+		and columns as sample names.
+
+	Raises
+	------
+	TypeError 
+		If `drop_int_above` is not `float` or `int`.
+
+	ValueError
+		If `drop_int_above` is not between 0 and 100 (percentage of tot. int.)
+	'''
+
+	#generate chemical composition dataframe
+	comps_all = _gen_chem_comp(forms_all)
+
+	#drop compounds with O/C > 1
+	if drop_high_OC:
+
+		#find indices of high OC compounds
+		hOC_ind = comps_all[comps_all['O'] > 1*comps_all['C']].index
+
+	else:
+		hOC_ind = pd.Index([])
+
+	#drop compounds with H/C > 2
+	if drop_high_HC:
+
+		#find indices of high HC compounds
+		hHC_ind = comps_all[comps_all['H'] > 2*comps_all['C']].index
+
+	else:
+		hHC_ind = pd.Index([])
+
+	#drop fliers
+	if drop_int_above is None:
+		#make empty index
+		hInt_ind = pd.Index([])
+
+	elif type(drop_int_above) not in [float, int]:
+		raise TypeError(
+			'drop_int_above must be float or int')
+
+	elif drop_int_above > 100 or drop_int_above <= 0:
+		raise ValuerErro(
+			'drop_int_above must be between 0 and 100 (percent of total int.)')
+
+	else:
+		#rescale to ensure percent intensity
+		ints_all_pct = 100*ints_all/ints_all.sum()
+
+		#find indices with high fractional intensity
+		max_int = ints_all_pct.max(axis = 1)
+		hInt_ind = max_int[max_int > drop_int_above].index
+
+	#union dropped indices
+	dr_ind = hInt_ind.union(hHC_ind.union(hOC_ind))
+
+	#drop all flagged formulae from comps, forms, and ints
+	comps = comps_all.drop(dr_ind)
+	forms = comps.index.values
+	ints = ints_all.drop(dr_ind)
+
+	return comps, forms, ints
 
 #define function to generate chemical composition dataframe
 def _gen_chem_comp(formulae):

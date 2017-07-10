@@ -254,16 +254,28 @@ class CrossTable(object):
 
 	def __init__(
 		self, 
-		intensities, 
+		intensities,
+		drop_int_above = None, #new v0.0.3
+		drop_high_OC = True, #new v0.0.3
+		drop_high_HC = True, #new v0.0.3
 		formulae = None,
 		rescale = None, 
 		sam_names = None):
 
 		#check that intensities and formulae are in right format
-		ints, forms, sams = _check_int(
-			intensities, 
+		ints_all, forms_all, sams = _check_int(
+			intensities,
 			formulae = formulae, 
 			sam_names = sam_names)
+
+		#new in v0.0.3: 
+		#drop high H/C, high O/C, and fliers
+		comps, forms, ints  = _drop_forms(
+			forms_all,
+			ints_all,
+			drop_int_above = drop_int_above,
+			drop_high_HC = drop_high_HC,
+			drop_high_OC = drop_high_OC)
 
 		nF, nS = np.shape(ints)
 		_check_forms(forms)
@@ -282,15 +294,16 @@ class CrossTable(object):
 				'Rescale value of %r is not recognized. Must be "fraction",'
 				' "max_peak", or "None".' % rescale)
 
+		#generate a chemical composition table
+		#comps = _gen_chem_comp(forms)
+
 		#store results
 		self.intensities = ints
 		self.sam_names = sams
 		self.formulae = forms
 		self.nF = nF
 		self.nS = nS
-
-		#generate a chemical composition table
-		self._chem_comp = _gen_chem_comp(forms)
+		self._chem_comp = comps
 
 		#calculate compound mass, category, class, NOSC, and AImod
 		self.cmpd_mass = _calc_mass(self)
@@ -304,6 +317,9 @@ class CrossTable(object):
 	def from_eo(
 		cls,
 		dir_path,
+		drop_int_above = None,
+		drop_high_OC = True,
+		drop_high_HC = True,
 		file_names = 'all',
 		rescale = None):
 		'''
@@ -357,11 +373,16 @@ class CrossTable(object):
 		'''
 
 		#combine all files into a single dataframe
-		intensities = _combine_EO_samples(dir_path, file_names)
+		intensities = _combine_EO_samples(
+			dir_path, 
+			file_names)
 
 		#return CrossTable instance
 		return cls(
-			intensities, 
+			intensities,
+			drop_int_above = drop_int_above,
+			drop_high_OC = drop_high_OC,
+			drop_high_HC = drop_high_HC,
 			formulae = None, 
 			rescale = rescale,
 			sam_names = None)
