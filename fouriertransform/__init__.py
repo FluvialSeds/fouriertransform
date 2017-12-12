@@ -15,7 +15,7 @@ documentation can be found at:
 
 	http://fouriertransform.readthedocs.io
 
-Version 0.0.3 is current as of 10 July 2017.
+Version 0.0.4 is current as of 12 December 2017.
 
 '''
 
@@ -24,7 +24,7 @@ from __future__ import(
 	print_function,
 	)
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 __docformat__ = 'restructuredtext en'
 
