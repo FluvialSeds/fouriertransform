@@ -205,20 +205,38 @@ class CrossTable(object):
 	parameter, here called `env_param`. You can either plot correlations as
 	Pearson or Spearman coefficients, and you can decide what fraction of
 	the total samples a formula must be contained in in order to be considered
-	for correlation. You can also determine the significance cutoff (alpha).
-	Resulting plot only retains statistically significant formulae. 
+	for correlation. You can also determine the significance cutoff (alpha)
+	and can only consider certain compound classes (i.e. CHO, CHON, CHOS)
+	rather than all compounds. Resulting plot only retains statistically
+	significant formulae. Resulting correlation coefficients and p-values for
+	statistically significant formulae are also stored in 'stats'.
 	An example::
 
 		#make axis
-		fig, ax = plt.subplots(1,1)
+		fig, ax = plt.subplots(1,2)
 
-		#make van krevelen plot
-		ax = ct.plot_correlation_vk(
+		#make van krevelen plot for all formulae
+		ax[0], stats = ct.plot_correlation_vk(
 			env_param,
-			ax = ax,
+			ax = ax[0],
 			corr_type = 'Spearman',
 			f = 1,
 			alpha = 0.05,
+			cmpd_cls = 'all',
+			edgecolor = 'w',
+			s = 40,
+			cmap = 'coolwarm',
+			vmin = -1,
+			vmax = 1)	
+
+		#make van krevelen plot for CHON formulae only
+		ax[1], stats = ct.plot_correlation_vk(
+			env_param,
+			ax = ax[1],
+			corr_type = 'Spearman',
+			f = 1,
+			alpha = 0.05,
+			cmpd_cls = 'CHON',
 			edgecolor = 'w',
 			s = 40,
 			cmap = 'coolwarm',
@@ -717,11 +735,12 @@ class CrossTable(object):
 	#define method for plotting a sample van Krevelen
 	def plot_correlation_vk(
 		self,
-		env_param, 
-		ax = None, 
+		env_param,
 		alpha = 0.05,
-		f = 1.0,
+		ax = None,
+		cmpd_cls = 'all',
 		corr_type = 'Pearson',
+		f = 1.0,
 		**kwargs):
 		'''
 		Method for generating a van Krevelen plot to compare individual
@@ -739,20 +758,24 @@ class CrossTable(object):
 			in the index for correlation (i.e. can handle missing samples).
 			Samples with NaN values will also be dropped.
 
-		ax : None or plt.axis
-			Axis to plot on. If `None`, creates an axis. Defaults to `None`.
-
 		alpha : float
 			The significance value to use for retaining statistically
 			significant formulae for plotting, must be between 0 and 1. 
 			Defaults to `0.05`.
 
-		f : float
-			The fraction of total samples in which a formula must be present
-			in order to be considered for correlation, ranging between 0.0
-			and 1.0. If some samples are missing env_param data, then f is the
-			fraction of retained samples in which a formula must be present.
-			Defaults to 1.
+		ax : None or plt.axis
+			Axis to plot on. If `None`, creates an axis. Defaults to `None`.
+
+		cmpd_cls: str
+			String saying which compound class to use for correlations.
+			Must be one of:
+
+				all, \n
+				CHO, \n
+				CHON, \n
+				CHOS \n
+			
+			Defaults to 'all'.
 
 		corr_type : str
 			String saying which statistical method to use for correlation.
@@ -761,10 +784,24 @@ class CrossTable(object):
 				Pearson, \n
 				Spearman \n
 
+			Defaults to 'Pearson'.
+
+		f : float
+			The fraction of total samples in which a formula must be present
+			in order to be considered for correlation, ranging between 0.0
+			and 1.0. If some samples are missing env_param data, then f is the
+			fraction of retained samples in which a formula must be present.
+			Defaults to 1.
+
 		Returns
 		-------
 		ax : plt.axis
 			Axis containing the van Krevelen plot of interest.
+
+		stats : df.DataFrame
+			Dataframe of resulting r (for Pearson) or rho (for Spearman)
+			values (collectively termed 'corr') and corresponding p-values for
+			all formulae that are included in the plot.
 
 		Raises
 		------
@@ -782,6 +819,9 @@ class CrossTable(object):
 
 		ValueError
 			If `corr_type` is not 'Pearson' or 'Spearman'.
+
+		ValueError
+			If `cmpd_cls` is not 'all', 'CHO', 'CHON', or 'CHOS'.
 
 		TypeError
 			If `intensities` is not ``pd.DataFrame``.
@@ -839,14 +879,21 @@ class CrossTable(object):
 			raise ValueError(
 				'f must be int or float between 0 and 1!')
 
+		#ensure cmpd_cls is the right string
+		if cmpd_cls not in ['all','CHO','CHON','CHOS']:
+			raise ValueError(
+				'cmpd_cls value of %r not recognized. Must be one of "all", '
+				' "CHO", "CHON", or "CHOS"' % cmpd_cls)
+
 		#make axis if necessary
 		if ax is None:
 			fig, ax = plt.subplots(1,1)
 
 		#set axis labels and title
-		title = 'Environmental correlations (' + corr_type + \
+		title = 'Env. corr. (' + corr_type + \
 			', f = ' + str(f) + \
-			', alpha = ' + str(alpha) + ')'
+			', alpha = ' + str(alpha) + \
+			', cmpds = ' + cmpd_cls + ')'
 		
 		ax.set_title(title)
 		ax.set_ylabel('H/C')
@@ -859,14 +906,23 @@ class CrossTable(object):
 		nS = len(sams)
 
 		#extract indices of peaks present in >= f fraction of samples
-		ind = ints[(ints > 0).sum(axis = 1) >= f * nS].index
+		i = ints[(ints > 0).sum(axis = 1) >= f * nS].index
+
+		#new in v.0.0.4!
+		#only retain compounds within the selected class
+		classes = self.cmpd_class[i]
+
+		if cmpd_cls is not 'all':
+			ind = classes[classes == cmpd_cls].index
+		else:
+			ind = i
 
 		#store number of retained formulae
 		nRet = len(ind)
 
 		#calculate correlations and only keep significantly correlated forms
 		ind_sig, rhos, pvals = _calc_corr(
-			ints.ix[ind], 
+			ints.loc[ind,:], 
 			env_param, 
 			alpha = alpha,
 			corr_type = corr_type)
@@ -876,7 +932,10 @@ class CrossTable(object):
 		#retain significant formulae and sort by ascending rho
 		c = rhos[ind_sig]
 		lab = corr_type + 'corr. coef.'
-		ind_sort = np.argsort(c)
+
+		#new in v.0.0.4!
+		#plots highest ABSOLUTE rho values on top!
+		ind_sort = np.abs(c).argsort()
 
 		#calculate H/C and O/C
 		HC = self._chem_comp.loc[ind_sig,'H']/self._chem_comp.loc[ind_sig,'C']
@@ -890,7 +949,7 @@ class CrossTable(object):
 			**kwargs)
 
 		#add colorbar
-		cbar = fig.colorbar(vk, label = lab)
+		cbar = ax.figure.colorbar(vk, label = lab)
 
 		#calculate summary statistics and plot as text
 		mu = rhos[ind_sig].abs().mean()
@@ -903,9 +962,22 @@ class CrossTable(object):
 		text = l1 + l2 + l3
 
 		#make text
-		ax.text(0.05, 0.95, text,
+		ax.text(0.05, 0.10, text,
 			transform = ax.transAxes,
 			horizontalalignment = 'left',
 			verticalalignment = 'top')
 
-		return ax
+		#set ranges
+		ax.set_ylim([0,2])
+		ax.set_xlim([0,1])
+
+		#new in version 0.0.4!
+		#make statistics dataframe
+		stats = pd.DataFrame(
+			index = ind_sig,
+			columns = ['corr','pvals'])
+
+		stats['corr'] = rhos[ind_sig]
+		stats['pvals'] = pvals[ind_sig]
+
+		return ax, stats
