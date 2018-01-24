@@ -21,6 +21,10 @@ Package Information
 
 :url:
   http://github.com/FluvialSeds/fouriertransform
+  http://pypi.python.org/pypi/fouriertransform/0.0.4
+
+:doi:
+	|doi|
 
 How to Cite
 -----------
@@ -72,3 +76,4 @@ This software is still in active deveopment. Please report any bugs directly to 
 
 
 .. |date| date::
+.. |doi| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1158757.svg
