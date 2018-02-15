@@ -322,7 +322,7 @@ class CrossTable(object):
 			ints = 100*ints/m
 
 		elif rescale in ['max_peak', 'Max_peak', 'Max_Peak']:
-			m = ints.max().max()
+			m = ints.max()
 			ints = ints*100/m
 
 		elif rescale is not None:
@@ -393,7 +393,7 @@ class CrossTable(object):
 			sample comparisons. Either `None`, 'fraction', or 'max_peak'. If
 			'fraction', scales each sample such that the sum of intensities 
 			for a given sample is equal to unity. If 'max_peak', scales such
-			that the most intense peak detected in any sample is equal to 100
+			that the most intense peak detected in each sample is equal to 100
 			and all other peaks are scaled accordingly. Defaults to `None`.
 
 		Raises

@@ -983,7 +983,9 @@ def _gen_sum_tab(ct):
 		'AveMass_N',
 		'AveMass_RA',
 		'NOSC_N',
-		'NOSC_RA'
+		'NOSC_RA',
+		'AImod_N',
+		'AImod_RA'
 		]
 
 	#concatenate everything into columns list
@@ -1011,6 +1013,12 @@ def _gen_sum_tab(ct):
 
 	sum_df['NOSC_RA'] = \
 		np.sum(ct.intensities.multiply(ct.NOSC, axis = 0))/tot_int
+
+	sum_df['AImod_N'] = \
+		np.sum(exists.multiply(ct.AImod, axis = 0))/tot_N
+
+	sum_df['AImod_RA'] = \
+		np.sum(ct.intensities.multiply(ct.AImod, axis = 0))/tot_int
 
 	sum_df[cls_mets] = _calc_pct(ct, cls_mets, ct.cmpd_class)
 	sum_df[cat_mets] = _calc_pct(ct, cat_mets, ct.cmpd_cat)
