@@ -11,7 +11,7 @@ Package Information
   Jordon D. Hemingway (jordon_hemingway@harvard.edu)
 
 :Version:
-  0.0.5
+  0.0.6
 
 :Release:
   15 February 2017
@@ -21,7 +21,7 @@ Package Information
 
 :url:
   http://github.com/FluvialSeds/fouriertransform
-  http://pypi.python.org/pypi/fouriertransform/0.0.5
+  http://pypi.python.org/pypi/fouriertransform/0.0.6
 
 :doi:
 	|doi|
