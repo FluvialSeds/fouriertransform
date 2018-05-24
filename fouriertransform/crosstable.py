@@ -773,18 +773,18 @@ class CrossTable(object):
 			if int_denom in ['sum','Sum']:
 				#calculate the normalized difference
 				c = (ints[sam_name1] - ints[sam_name2]) / ints.sum(axis = 1)
+				lab = 'peak intensity difference (sum normalized)'
 
 			elif int_denom in ['max','Max']:
 				#calculate the normalized difference
 				c = (ints[sam_name1] - ints[sam_name2]) / ints.max(axis = 1)
+				lab = 'peak intensity difference (max normalized)'
 
 			#raise error if denom type is not max or sum
 			else:
 				raise ValueError(
 					'int_denom %r not recognized, must be "max" or "sum"'
 					% int_denom)
-
-
 
 			#sort by ascending intensity
 			ind_sort = np.argsort(c)
@@ -797,7 +797,6 @@ class CrossTable(object):
 				**kwargs)
 
 			#add colorbar
-			lab = 'peak intensity difference (normalized)'
 			cbar = fig.colorbar(vk, label = lab)
 
 		#raise error if type is not class of intensity
