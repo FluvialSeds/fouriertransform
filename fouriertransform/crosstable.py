@@ -620,6 +620,7 @@ class CrossTable(object):
 		sam_name2, 
 		ax = None,
 		plot_type = 'class',
+		int_denom = 'max',
 		**kwargs):
 		'''
 		Method for generating a van Krevelen plot of the difference between
@@ -648,13 +649,19 @@ class CrossTable(object):
 			Type of plot to make, either 'class' for plotting color-coded
 			compound classes or 'intensity' for plotting peak intensities.
 			If 'intensity', plotted values are the difference in relative
-			intensity between `sam_name1` and `sam_name2`, divided by the sum
-			of both samples:
+			intensity between `sam_name1` and `sam_name2`, divided by a
+			normalizing denominator (defined below):
 
-					x = (r_1 - r_2) / (r_1 + r_2)
+					x = (r_1 - r_2) / denom
 
 			i.e. `sam_name1` is the "final" sample and `sam_name2` is the
 			"initila" sample.
+
+		int_denom : str
+			Normalizing denominator for 'intensity' difference plots,
+			either 'max' or 'sum'. If 'max', divides by the maximum relative
+			intensity in either `sam_name` or `sam_name2`. If 'sum', divides by
+			the sum in both samples.
 
 		Returns
 		-------
@@ -763,8 +770,21 @@ class CrossTable(object):
 			#calculate the relative intensities within each sample
 			ints = self.intensities.loc[ind, [sam_name1, sam_name2]]
 
-			#calculate the normalized difference
-			c = (ints[sam_name1] - ints[sam_name2]) / ints.sum(axis = 1)
+			if int_denom in ['sum','Sum']:
+				#calculate the normalized difference
+				c = (ints[sam_name1] - ints[sam_name2]) / ints.sum(axis = 1)
+
+			elif int_denom in ['max','Max']:
+				#calculate the normalized difference
+				c = (ints[sam_name1] - ints[sam_name2]) / ints.max(axis = 1)
+
+			#raise error if denom type is not max or sum
+			else:
+				raise ValueError(
+					'int_denom %r not recognized, must be "max" or "sum"'
+					% int_denom)
+
+
 
 			#sort by ascending intensity
 			ind_sort = np.argsort(c)
@@ -779,6 +799,12 @@ class CrossTable(object):
 			#add colorbar
 			lab = 'peak intensity difference (normalized)'
 			cbar = fig.colorbar(vk, label = lab)
+
+		#raise error if type is not class of intensity
+		else:
+			raise ValueError(
+				'Plot type %r not recognized, must be "class" or "intensity"'
+				% plot_type)
 
 		return ax
 
