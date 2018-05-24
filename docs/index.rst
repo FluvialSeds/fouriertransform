@@ -16,10 +16,10 @@ Package Information
   Jordon D. Hemingway (jordon_hemingway@harvard.edu)
 
 :Version:
-  0.0.4
+  0.0.7
 
 :Release:
-  12 December 2017
+  24 May 2018
 
 :License:
   GNU GPL v3 (or greater)
