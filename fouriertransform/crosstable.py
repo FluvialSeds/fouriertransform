@@ -619,6 +619,7 @@ class CrossTable(object):
 		sam_name1, 
 		sam_name2, 
 		ax = None,
+		plot_type = 'class',
 		**kwargs):
 		'''
 		Method for generating a van Krevelen plot of the difference between
@@ -642,6 +643,18 @@ class CrossTable(object):
 
 		ax : None or plt.axis
 			Axis to plot on. If `None`, creates an axis.
+
+		plot_type : str
+			Type of plot to make, either 'class' for plotting color-coded
+			compound classes or 'intensity' for plotting peak intensities.
+			If 'intensity', plotted values are the difference in relative
+			intensity between `sam_name1` and `sam_name2`, divided by the sum
+			of both samples:
+
+					x = (r_1 - r_2) / (r_1 + r_2)
+
+			i.e. `sam_name1` is the "final" sample and `sam_name2` is the
+			"initila" sample.
 
 		Returns
 		-------
@@ -686,49 +699,86 @@ class CrossTable(object):
 		ax.set_ylabel('H/C')
 		ax.set_xlabel('O/C')
 
-		#calculate index in sam_name1 but missing from sam_name2
-		ind = self.intensities[
-			(self.intensities[sam_name1] > 0) & 
-			(self.intensities[sam_name2] == 0)
-			].index
+		#if plot type is 'class', extract differences and plot by class
+		if plot_type in ['class', 'Class']:
 
-		#calculate H/C and O/C for formulae contained within the sample
-		HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
-		OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
+			#calculate index in sam_name1 but missing from sam_name2
+			ind = self.intensities[
+				(self.intensities[sam_name1] > 0) & 
+				(self.intensities[sam_name2] == 0)
+				].index
 
-		#extract all unique classes
-		ccls = self.cmpd_class.unique()
-		classes = self.cmpd_class[ind]
+			#calculate H/C and O/C for formulae contained within the sample
+			HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
+			OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
 
-		#make a list of colors, extending to all possible classes
-		colors = [
-			[.071, 0, .40], #CHO
-			[.431, .082, .035], #CHON
-			[.769, .455, 0], #CHOS
-			[0, .561, .569], #CHOP
-			[.133, .376, .035], #CHONS
-			]
+			#extract all unique classes
+			ccls = self.cmpd_class.unique()
+			classes = self.cmpd_class[ind]
 
-		#loop through and plot
-		for i, cc in enumerate(ccls):
-			#extract indices
-			ci = classes[classes == cc].index
+			#make a list of colors, extending to all possible classes
+			colors = [
+				[.071, 0, .40], #CHO
+				[.431, .082, .035], #CHON
+				[.769, .455, 0], #CHOS
+				[0, .561, .569], #CHOP
+				[.133, .376, .035], #CHONS
+				]
 
-			#plot
-			ax.scatter(
-				OC[ci],
-				HC[ci],
-				c = colors[i],
-				label = cc,
+			#loop through and plot
+			for i, cc in enumerate(ccls):
+				#extract indices
+				ci = classes[classes == cc].index
+
+				#plot
+				ax.scatter(
+					OC[ci],
+					HC[ci],
+					c = colors[i],
+					label = cc,
+					**kwargs)
+
+			#add legend
+			ax.legend(
+				loc = 'best',
+				framealpha = 1,
+				scatterpoints = 1,
+				markerscale = 2,
+				fontsize = 'small')
+
+		#if plot_type is 'intensities', calculate the difference in intensity
+		# and plot
+		elif plot_type in ['intensity','Intensity']:
+
+			#calculate index in either sample
+			ind = self.intensities[
+				(self.intensities[sam_name1] > 0) | 
+				(self.intensities[sam_name2] > 0)
+				].index
+
+			#calculate H/C and O/C for formulae contained within the sample
+			HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
+			OC = self._chem_comp.loc[ind,'O']/self._chem_comp.loc[ind,'C']
+
+			#calculate the relative intensities within each sample
+			ints = self.intensities.loc[ind, [sam_name1, sam_name2]]
+
+			#calculate the normalized difference
+			c = (ints[sam_name1] - ints[sam_name2]) / ints.sum(axis = 1)
+
+			#sort by ascending intensity
+			ind_sort = np.argsort(c)
+
+			#plot results
+			vk = ax.scatter(
+				OC[ind_sort], 
+				HC[ind_sort], 
+				c = c[ind_sort].values, 
 				**kwargs)
 
-		#add legend
-		ax.legend(
-			loc = 'best',
-			framealpha = 1,
-			scatterpoints = 1,
-			markerscale = 2,
-			fontsize = 'small')
+			#add colorbar
+			lab = 'peak intensity difference (normalized)'
+			cbar = fig.colorbar(vk, label = lab)
 
 		return ax
 
