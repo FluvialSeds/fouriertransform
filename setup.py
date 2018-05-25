@@ -35,7 +35,7 @@ setup(name='fouriertransform',
 	install_requires=[
 		'matplotlib',
 		'numpy',
-		'pandas>=0.23.0',
+		'pandas',
 		'scipy'
 	],
 	test_suite='nose.collector',
