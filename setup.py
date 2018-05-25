@@ -20,7 +20,8 @@ setup(name='fouriertransform',
 		'Topic :: Scientific/Engineering'
 	],
 	url='https://github.com/FluvialSeds/fouriertransform',
-	download_url='https://github.com/FluvialSeds/fouriertransform/tarball/0.0.8',
+	# download_url='https://github.com/FluvialSeds/fouriertransform/tarball/0.0.8',
+	download_url='https://github.com/FluvialSeds/fouriertransform/archive/0.0.8.tar.gz',
 	keywords=[
 		'geochemistry',
 		'FT-ICR MS',
@@ -35,7 +36,7 @@ setup(name='fouriertransform',
 	install_requires=[
 		'matplotlib',
 		'numpy',
-		'pandas',
+		'pandas>=0.23.0',
 		'scipy'
 	],
 	test_suite='nose.collector',
