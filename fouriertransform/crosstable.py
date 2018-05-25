@@ -621,6 +621,7 @@ class CrossTable(object):
 		ax = None,
 		plot_type = 'class',
 		int_denom = 'max',
+		shared = False,
 		**kwargs):
 		'''
 		Method for generating a van Krevelen plot of the difference between
@@ -662,6 +663,10 @@ class CrossTable(object):
 			either 'max' or 'sum'. If 'max', divides by the maximum relative
 			intensity in either `sam_name` or `sam_name2`. If 'sum', divides by
 			the sum in both samples.
+
+		shared : boolean
+			For 'intensity' difference plots, if `True`, only considers
+			formulae that are present in both samples. Defaults to `False`.
 
 		Returns
 		-------
@@ -758,10 +763,19 @@ class CrossTable(object):
 		elif plot_type in ['intensity','Intensity']:
 
 			#calculate index in either sample
-			ind = self.intensities[
-				(self.intensities[sam_name1] > 0) | 
-				(self.intensities[sam_name2] > 0)
-				].index
+
+			#if shared, only formulae that are in both
+			if shared:
+				ind = self.intensities[
+					(self.intensities[sam_name1] > 0) & 
+					(self.intensities[sam_name2] > 0)
+					].index				
+
+			else:
+				ind = self.intensities[
+					(self.intensities[sam_name1] > 0) | 
+					(self.intensities[sam_name2] > 0)
+					].index
 
 			#calculate H/C and O/C for formulae contained within the sample
 			HC = self._chem_comp.loc[ind,'H']/self._chem_comp.loc[ind,'C']
@@ -787,7 +801,7 @@ class CrossTable(object):
 					% int_denom)
 
 			#sort by ascending intensity
-			ind_sort = np.argsort(c)
+			ind_sort = np.argsort(np.abs(c))
 
 			#plot results
 			vk = ax.scatter(

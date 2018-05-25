@@ -11,17 +11,17 @@ Package Information
   Jordon D. Hemingway (jordon_hemingway@harvard.edu)
 
 :Version:
-  0.0.6
+  0.0.8
 
 :Release:
-  15 February 2017
+  25 May 2018
 
 :License:
   GNU GPL v3 (or greater)
 
 :url:
   http://github.com/FluvialSeds/fouriertransform
-  http://pypi.python.org/pypi/fouriertransform/0.0.6
+  http://pypi.python.org/pypi/fouriertransform/0.0.7
 
 :doi:
 	|doi|

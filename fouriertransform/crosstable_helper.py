@@ -785,7 +785,10 @@ def _combine_EO_samples(
 		s_int = _input_EO_sample(p, s, norm = False)
 
 		#store
-		intensities = pd.concat([intensities, s_int], axis = 1)
+		intensities = pd.concat([intensities, s_int],
+			axis = 1,
+			sort = False
+			)
 
 	#fill missing data with zeros
 	intensities.fillna(0, inplace = True)
