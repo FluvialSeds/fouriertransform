@@ -61,7 +61,7 @@ class CrossTable(object):
 		String telling the method how to rescale peak intensities, either
 		'fraction', 'max_peak', or None. If 'fraction', scales intensities such
 		that the sum for *each sample* is equal to 100. If 'max_peak', scales
-		intensities such that the largest peak *in the entire sample set* is
+		intensities such that the largest peak *in each sample* is
 		equal to 100.
 
 	sam_names : `None` or list
